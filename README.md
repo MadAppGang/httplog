@@ -10,7 +10,23 @@ Nice and clean output is critical for any web framework. Than is why come people
 This library brings you fantastic http logs to any web framework, even if you use native `net/http` for that.
 
 But it's better to see once, here the default output you will get with couple of lines of code:
+
 ![logs screenshot](docs/logs_screenshot.png)
+
+And actual code looks like this:
+
+```go
+  func main() {
+    // setup routes
+    http.Handle("/happy", httplog.Logger(happyHandler))
+    http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
+
+    //run server
+    _ = http.ListenAndServe(":3333", nil)
+  }
+```
+
+All you need is wrap you handler with `httplog.Logger` and the magic happens.
 
 Here is a main features:
 
@@ -35,6 +51,9 @@ Here is a main features:
 - has the list of routes to ignore
 - build in structure logger integration
 - callback function to modify response before write back (add headers or do something)
+
+This framework is highly inspired by [Gin logger](https://github.com/gin-gonic/gin/blob/master/logger.go) library, but has not Gin dependencies at all and has some improvements.
+Httplog has only one dependency at all: `github.com/mattn/go-isatty`. So it's will not affect your codebase size.
 
 ## Custom format
 
