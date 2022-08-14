@@ -17,8 +17,9 @@ import (
 // if the functionality calls for it.
 type ResponseWriter interface {
 	http.ResponseWriter
+	http.Hijacker
 	http.Flusher
-	http.Pusher
+	http.CloseNotifier
 	// Status returns the status code of the response or 0 if the response has
 	// not been written
 	Status() int
@@ -33,6 +34,8 @@ type ResponseWriter interface {
 	// If you need to log or save full response bodies - use it
 	// But extra memory and CPU will be used for that
 	Body() []byte
+	// Manually set Status and Size if you need, written is set as well after call
+	Set(status, size int)
 }
 
 type beforeFunc func(ResponseWriter)
@@ -153,4 +156,14 @@ func (rw *responseWriter) Push(target string, opts *http.PushOptions) error {
 		return pusher.Push(target, opts)
 	}
 	return errors.New("the ResponseWriter doesn't support the Pusher interface")
+}
+
+// CloseNotify implements the http.CloseNotifier interface.
+func (w *responseWriter) CloseNotify() <-chan bool {
+	return w.ResponseWriter.(http.CloseNotifier).CloseNotify()
+}
+
+func (w *responseWriter) Set(status, size int) {
+	w.status = status
+	w.size = size
 }
