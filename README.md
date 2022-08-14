@@ -36,9 +36,68 @@ Here is a main features:
 - build in structure logger integration
 - callback function to modify response before write back (add headers or do something)
 
-## Examples
+## Custom format
+
+TODO: Jack
+
+## Integrate with structure logger
+
+TODO: Jack
+
+## Customize log output
+
+TODO: Jack
+
+## Use GoogleApp Engine or CloudFlare
+
+TODO: Jack
+
+## Run custom logic before a response has been written
+
+TODO: Jack
+
+## How to save request body and headers
+
+TODO: Jack
+
+## Integration examples
 
 Please go to examples folder and see how it's work:
 
 ![Run demo](docs/demo_run.gif)
 
+### Native `net/http` package
+
+TODO: Jack
+
+### Alice middleware
+
+TODO: Jack
+
+### Chi
+
+TODO: Jack
+
+### Echo
+
+TODO: Jack
+
+### Gin
+
+TODO: Jack
+
+### Goji
+
+TODO: Jack
+
+### Gorilla
+
+TODO: Jack
+
+### HTTPRouter
+
+TODO: Jack
+
+### Negroni
+
+TODO: Jack
