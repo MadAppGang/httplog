@@ -1,5 +1,7 @@
 # Beautiful logger for http
 
+Proudly created and supported by [MadAppGang](https://madappgang.com) company.
+
 ## Why?
 
 Every single web framework has a build-in logger already, why do we need on more?
@@ -31,15 +33,15 @@ All you need is wrap you handler with `httplog.Logger` and the magic happens.
 Here is a main features:
 
 - framework agnostic (could be easily integrated with any web framework), you can find `examples` for:
-  - alice
-  - chi
-  - echo
-  - gin
-  - goji
-  - gorilla mux
-  - httprouter
-  - negroni
-  - native net/http
+  - [alice](https://github.com/MadAppGang/httplog/blob/main/examples/alice/main.go)
+  - [chi](https://github.com/MadAppGang/httplog/blob/main/examples/chi/main.go)
+  - [echo](https://github.com/MadAppGang/httplog/blob/main/examples/echo/main.go)
+  - [gin](https://github.com/MadAppGang/httplog/blob/main/examples/gin/main.go)
+  - [goji](https://github.com/MadAppGang/httplog/blob/main/examples/goji/main.go)
+  - [gorilla mux](https://github.com/MadAppGang/httplog/blob/main/examples/gorilla/main.go)
+  - [httprouter](https://github.com/MadAppGang/httplog/blob/main/examples/httprouter/main.go)
+  - [negroni](https://github.com/MadAppGang/httplog/blob/main/examples/negroni/main.go)
+  - [native net/http](https://github.com/MadAppGang/httplog/blob/main/examples/nethttp/main.go)
   - not found yours? let us know and we will add it
 - response code using special wrapper
 - response length using special wrapper
