@@ -7,7 +7,7 @@ Proudly created and supported by [MadAppGang](https://madappgang.com) company.
 Every single web framework has a build-in logger already, why do we need on more?
 The question is simple and the answer is not.
 
-Nice and clean output is critical for any web framework. Than is why come people use go web frameworks just because to get beautiful logs.
+Nice and clean output is critical for any web framework. Than is why some people use go web frameworks just to get beautiful logs.
 
 This library brings you fantastic http logs to any web framework, even if you use native `net/http` for that.
 
@@ -59,13 +59,74 @@ Httplog has only one dependency at all: `github.com/mattn/go-isatty`. So it's wi
 
 ## Custom format
 
-TODO: Jack
+You can modify formatter as you want. Now there are two formatter available: 
+
+- `DefaultLogFormatter`
+- `ShortLogFormatter`
+- `HeadersLogFormatter`
+- `DefaultLogFormatterWithHeaders`
+- `BodyLogFormatter`
+- `DefaultLogFormatterWithHeadersAndBody`
+
+And you can combine them using `ChainLogFormatter`.
+
+Here is an example of formatter in code:
+
+```go
+// Short log formatter
+shortLoggedHandler := httplog.LoggerWithFormatter(
+  httplog.ShortLogFormatter,
+  wrappedHandler,
+)    
+```
+
+You can define your own log format. Log formatter is a function with a set of precalculated parameters:
+
+```go
+// Custom log formatter
+customLoggedHandler := httplog.LoggerWithFormatter(
+  // formatter is a function, you can define your own
+  func(param httplog.LogFormatterParams) string {
+    statusColor := param.StatusCodeColor()
+    resetColor := param.ResetColor()
+    boldRedText := "\033[1;31m"
+
+    return fmt.Sprintf("🥑[I am custom router!!!] %s %3d %s| size: %10d bytes | %s %#v %s 🔮👨🏻‍💻\n",
+      statusColor, param.StatusCode, resetColor,
+      param.BodySize,
+      boldRedText, param.Path, resetColor,
+    )
+  },
+  happyHandler,
+)
+http.Handle("/happy_custom", customLoggedHandler)
+```
+
+For more details and how to capture response body please look in the [example app](https://github.com/MadAppGang/httplog/blob/main/examples/body_formatter/main.go):
+
+![body output](docs/full_body_formatter.png)
+
+params is a type of LogFormatterParams and the following params available for you:
+
+| param | description |
+| --- | --- |
+| Request | `http.Request` instance |
+| RouterName | when you create logger, you can specify router name |
+| Timestamp | TimeStamp shows the time after the server returns a response |
+| StatusCode | StatusCode is HTTP response code |
+| Latency | Latency is how much time the server cost to process a certain request |
+| ClientIP | ClientIP calculated real IP of requester, see Proxy for details |
+| Method | Method is the HTTP method given to the request |
+| Path | Path is a path the client requests |
+| BodySize | BodySize is the size of the Response Body |
+| Body | Body is a body content, if body is copied |
+
 
 ## Integrate with structure logger
 
 TODO: Jack
 
-## Customize log output
+## Customize log output destination
 
 TODO: Jack
 

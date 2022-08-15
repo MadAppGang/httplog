@@ -42,20 +42,20 @@ type beforeFunc func(ResponseWriter)
 
 // NewResponseWriter creates a ResponseWriter that wraps an http.ResponseWriter
 func NewResponseWriter(rw http.ResponseWriter) ResponseWriter {
-	nrw := &responseWriter{
-		ResponseWriter: rw,
-		copyBody:       false,
-	}
-
-	return nrw
+	return NewWriter(rw, false)
 }
 
 // NewResponseWriterWithBody creates a ResponseWriter that wraps an http.ResponseWriter
 // and copy the body of response. The body is not copied if you use ReadFrom for obvious reason
 func NewResponseWriterWithBody(rw http.ResponseWriter) ResponseWriter {
+	return NewWriter(rw, true)
+}
+
+// NewWriter creates a ResponseWriter that wraps an http.ResponseWriter and optionaly capture body
+func NewWriter(rw http.ResponseWriter, captureBody bool) ResponseWriter {
 	nrw := &responseWriter{
 		ResponseWriter: rw,
-		copyBody:       true,
+		copyBody:       captureBody,
 	}
 
 	return nrw

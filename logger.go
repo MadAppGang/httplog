@@ -57,6 +57,9 @@ type LoggerConfig struct {
 	// Router prints router name in the log.
 	// If you have more than one router it is useful to get one's name in a console output.
 	RouterName string
+
+	// CaptureBody saves response body copy for debug  purposes
+	CaptureBody bool
 }
 
 // LogFormatter gives the signature of the formatter function passed to LoggerWithFormatter
@@ -77,16 +80,18 @@ type LogFormatterParams struct {
 	StatusCode int
 	// Latency is how much time the server cost to process a certain request.
 	Latency time.Duration
-	// ClientIP equals Context's ClientIP method.
+	// ClientIP calculated real IP of requester, see Proxy for details.
 	ClientIP string
 	// Method is the HTTP method given to the request.
 	Method string
 	// Path is a path the client requests.
 	Path string
-	// isTerm shows whether gin's output descriptor refers to a terminal.
+	// isTerm shows whether output descriptor refers to a terminal.
 	isTerm bool
 	// BodySize is the size of the Response Body
 	BodySize int
+	// Body is a body content, if body is copied
+	Body []byte
 }
 
 // StatusCodeColor is the ANSI color for appropriately logging http status code to a terminal.
@@ -157,11 +162,27 @@ func Logger(next http.Handler) http.Handler {
 	}, next)
 }
 
+func LoggerWithName(routerName string, next http.Handler) http.Handler {
+	return LoggerWithConfig(LoggerConfig{
+		ProxyHandler: NewProxy(),
+		RouterName:   routerName,
+	}, next)
+}
+
 // LoggerWithFormatter instance a Logger middleware with the specified log format function.
 func LoggerWithFormatter(f LogFormatter, next http.Handler) http.Handler {
 	return LoggerWithConfig(LoggerConfig{
 		Formatter:    f,
 		ProxyHandler: NewProxy(),
+	}, next)
+}
+
+// LoggerWithFormatter instance a Logger middleware with the specified log format function.
+func LoggerWithFormatterAndName(routerName string, f LogFormatter, next http.Handler) http.Handler {
+	return LoggerWithConfig(LoggerConfig{
+		Formatter:    f,
+		ProxyHandler: NewProxy(),
+		RouterName:   routerName,
 	}, next)
 }
 
@@ -219,7 +240,7 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 
 		// Process request
 		// Wrap response writer with Recorded response writer
-		wr := NewResponseWriter(w)
+		wr := NewWriter(w, conf.CaptureBody)
 		next.ServeHTTP(wr, r)
 
 		// Log only when path is not being skipped
@@ -238,6 +259,7 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 			param.StatusCode = wr.Status()
 
 			param.BodySize = wr.Size()
+			param.Body = wr.Body()
 
 			param.RouterName = conf.RouterName
 
