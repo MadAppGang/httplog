@@ -13,7 +13,7 @@ import (
 // license that can be found in the LICENSE file.
 
 // BodyLogFormatter format function with JSON body output or text
-var BodyLogFormatter = func(param LogFormatterParams) string {
+func BodyLogFormatter(param LogFormatterParams) string {
 	var blueColor, yellowColor, greenColor, resetColor string
 	if param.IsOutputColor() {
 		blueColor = blue

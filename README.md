@@ -121,7 +121,25 @@ params is a type of LogFormatterParams and the following params available for yo
 
 ## Integrate with structure logger
 
-TODO: Jack
+Good and nice output is good, but as soon as we have so much data about every response it is a good idea to pass it to our application log structured collector.
+
+One of the most popular solution is [Uber zap](https://github.com/uber-go/zap).
+You can use any structured logger you want, use zap's integration example as a reference.
+
+All you need is create custom log formatter function with your logger integration.
+This repository has this formatter for zap created and you can use it importing `github.com/MadAppGang/httplog/zap`:
+
+```go
+logger := httplog.LoggerWithConfig(
+  httplog.LoggerConfig{
+    Formatter:  lzap.DefaultZapLogger(zapLogger, zap.InfoLevel, ""),
+  },
+  http.HandlerFunc(handler),
+)
+http.Handle("/happy", logger)
+```
+
+You can find full-featured [example in zap integration folder](https://github.com/MadAppGang/httplog/blob/main/examples/zap/main.go).
 
 ## Customize log output destination
 

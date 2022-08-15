@@ -7,7 +7,7 @@ import "fmt"
 // license that can be found in the LICENSE file.
 
 // HeadersLogFormatter format function with headers output.
-var HeadersLogFormatter = func(param LogFormatterParams) string {
+func HeadersLogFormatter(param LogFormatterParams) string {
 	output := ""
 	resetColor := param.ResetColor()
 	var blueColor, greenColor string

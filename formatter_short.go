@@ -9,7 +9,7 @@ import (
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-var ShortLogFormatter = func(param LogFormatterParams) string {
+func ShortLogFormatter(param LogFormatterParams) string {
 	var statusColor, resetColor string
 	if param.IsOutputColor() {
 		statusColor = param.StatusCodeColor()
