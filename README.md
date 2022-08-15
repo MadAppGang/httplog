@@ -286,6 +286,8 @@ e.Use(loggerMiddleware)11
 e.GET("/happy", happyHandler)
 ```
 
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/echo/main.go).
+
 ### Gin
 
 Gin has the most beautiful log output. That is why this package has build highly inspired by `Gin's` logger.
@@ -323,18 +325,76 @@ r.Use(LoggerMiddleware())
 r.GET("/happy", happyHandler)
 ```
 
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/gin/main.go).
+
 ### Goji
 
-TODO: Jack
+Goji is using canonical middleware approach, that is why it is working with httplog out-of-the-box.
+
+You don't need wrappers or anything like that.
+
+```go
+mux := goji.NewMux()
+mux.Handle(pat.Get("/happy"), httplog.Logger(happyHandler))
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/goji/main.go).
 
 ### Gorilla
 
-TODO: Jack
+Gorilla mux is one of the most loved muxer/router.
+Gorilla is using canonical middleware approach, that is why it is working with httplog out-of-the-box.
+
+You need to create simple Handler wrapper:
+
+```go
+func LoggerMiddleware(h http.Handler) http.Handler {
+  return httplog.Logger(h)
+}
+
+r := mux.NewRouter()
+r.HandleFunc("/happy", happyHandler)
+r.Use(LoggerMiddleware)
+
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/gorilla/main.go).
 
 ### HTTPRouter
 
-TODO: Jack
+To use HTPPRouter you need to create simple wrapper. As HTTPRouter using custom `httprouter.Handler` and additional argument with params in handler function.
+
+```go
+func LoggerMiddleware(h httprouter.Handle) httprouter.Handle {
+  return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+    logger := httplog.Logger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+      h(w, r, ps)
+    }))
+    logger.ServeHTTP(w, r)
+  }
+}
+
+//use as native middleware
+router := httprouter.New()
+router.GET("/happy", LoggerMiddleware(happyHandler))
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/httprouter/main.go).
 
 ### Negroni
 
-TODO: Jack
+Negroni uses custom `negroni.Handler` as middleware. We need to create custom wrapper for that:
+
+```go
+var negroniLoggerMiddleware negroni.Handler = negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
+  logger := httplog.Logger(next)
+  logger.ServeHTTP(rw, r)
+})
+
+//use it as native middleware:
+n := negroni.New()
+n.Use(negroniLoggerMiddleware)
+n.UseHandler(mux)
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/negroni/main.go).
