@@ -104,10 +104,6 @@ http.Handle("/happy_custom", customLoggedHandler)
 
 For more details and how to capture response body please look in the [example app](https://github.com/MadAppGang/httplog/blob/main/examples/custom_formatter/main.go).
 
-You can capture response data as well. But please use it in dev environments only, as it use extra resources and produce a lot of output in terminal. Example of body output [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/body_formatter/main.go).
-
-![body output](docs/full_body_formatter.png)
-
 params is a type of LogFormatterParams and the following params available for you:
 
 | param | description |
@@ -122,7 +118,6 @@ params is a type of LogFormatterParams and the following params available for yo
 | Path | Path is a path the client requests |
 | BodySize | BodySize is the size of the Response Body |
 | Body | Body is a body content, if body is copied |
-
 
 ## Integrate with structure logger
 
@@ -142,7 +137,22 @@ TODO: Jack
 
 ## How to save request body and headers
 
-TODO: Jack
+
+You can capture response data as well. But please use it in dev environments only, as it use extra resources and produce a lot of output in terminal. Example of body output [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/body_formatter/main.go).
+
+![body output](docs/full_body_formatter.png)
+
+You can use `DefaultLogFormatterWithHeaders` for headers output or `DefaultLogFormatterWithHeadersAndBody` to output response body. Don't forget to set `CaptureBody` in LoggerParams.
+
+You can combine your custom Formatter and `HeadersLogFormatter` or/and `BodyLogFormatter` using `ChainLogFormatter`:
+
+```go
+var myFormatter = httplog.ChainLogFormatter(
+  MyLogFormatter, 
+  httplog.HeadersLogFormatter, 
+  httplog.BodyLogFormatter,
+)
+```
 
 ## Integration examples
 
