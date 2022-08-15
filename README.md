@@ -143,18 +143,47 @@ You can find full-featured [example in zap integration folder](https://github.co
 
 ## Customize log output destination
 
-TODO: Jack
+You can use any output you need, your output must support `io.Writer` protocol.
+After that you need init logger:
+
+```go
+buffer := new(bytes.Buffer)
+logger := LoggerWithWriter(buffer, handler) //all output is written to buffer
+```
 
 ## Use GoogleApp Engine or CloudFlare
 
-TODO: Jack
+You application is operating behind load balancers and reverse proxies. That is why origination IP address is changing on every hop.
+To save the first sender's IP (real user remote IP) reverse proxies should save original IP in request headers.
+Default headers are `X-Forwarded-For` and  `X-Real-IP`.
 
-## Run custom logic before a response has been written
+But some clouds have custom headers, like Cloudflare and Google Apps Engine.
+If you are using those clouds or have custom headers in you environment, you can handle that by using custom `Proxy` init parameters:
 
-TODO: Jack
+```go
+httplog.LoggerWithConfig(
+  httplog.LoggerConfig{
+    ProxyHandler: NewProxyWithType(httpdlog.ProxyGoogleAppEngine),
+  },
+http.HandlerFunc(h),
+```
+
+or if you have your custom headers:
+
+```go
+logger := httplog.LoggerWithConfig(
+  httplog.LoggerConfig{
+    ProxyHandler: NewProxyWithTypeAndHeaders(
+      httpdlog.ProxyDefaultType, 
+      []string{"My-HEADER-NAME", "OTHER-HEADER-NAME"}
+    ),
+  },
+  handler,
+)
+
+```
 
 ## How to save request body and headers
-
 
 You can capture response data as well. But please use it in dev environments only, as it use extra resources and produce a lot of output in terminal. Example of body output [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/body_formatter/main.go).
 
@@ -180,23 +209,119 @@ Please go to examples folder and see how it's work:
 
 ### Native `net/http` package
 
-TODO: Jack
+This package is suing canonical golang approach, and it easy to implement it with all `net/http` package.
+
+```go
+http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/nethttp/main.go).
 
 ### Alice middleware
 
-TODO: Jack
+Alice is a fantastic lightweight framework to chain and manage middlewares. As Alice is using canonical approach, it is working with httplog out-of-the-box.
+
+All you need is to define middleware wrapper:
+
+```golang
+func LoggerMiddleware(h http.Handler) http.Handler {
+   return httplog.Logger(h)
+}
+
+.....
+chain := alice.New(LoggerMiddleware, nosurf.NewPure)
+mux.Handle("/happy", chain.Then(happyHandler()))
+```
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/alice/main.go).
 
 ### Chi
 
-TODO: Jack
+Chi is a router which uses the standard approach as `Alice` package. All you need is to create simple handler wrapper and use it as native Chi middleware:
+
+```go
+func LoggerMiddleware(h http.Handler) http.Handler {
+  return httplog.Logger(h)
+}
+
+r := chi.NewRouter()
+r.Use(LoggerMiddleware)
+r.Get("/happy", happyHandler)
+...
+
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/chi/main.go).
+
+```
 
 ### Echo
 
-TODO: Jack
+Echo middleware uses internal `echo.Context` to manage request/responser flow and middleware management.
+
+As a result, `echo` creates it's own http.ResponseWriter wrapper to catch all written data.
+That is why `httplog` could not handle it automatically.
+
+All you need is create wrapper, which set the response status and size manually from `echo's` response writer wrapper.
+
+```go
+func loggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+  return func(c echo.Context) error {
+    logger := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+      if err := next(c); err != nil {
+]      c.Error(err)
+      }
+      // echo is overwriting http.ResponseWriter to proxy data write (c.Response() as echo.Response type)
+      // we just need manually bring this data back to our log's response writer (rw variable)
+      lrw, _ := rw.(httplog.ResponseWriter)
+      lrw.Set(c.Response().Status, int(c.Response().Size))
+    }))
+
+    logger.ServeHTTP(c.Response().Writer, c.Request())
+    return nil
+  }
+}
+
+//use this as native echo middleware:
+e := echo.New()
+e.Use(loggerMiddleware)11
+e.GET("/happy", happyHandler)
+```
 
 ### Gin
 
-TODO: Jack
+Gin has the most beautiful log output. That is why this package has build highly inspired by `Gin's` logger.
+
+If you missing some features of Gin's native logger and want to use this one, it is still possible.
+
+Gin middleware uses internal `gin.Context` to manage request/responser flow and middleware management. The same approach as `Echo`.
+
+That is why we created `httplog`, to bring this fantastic logger to native golang world :-)
+
+`Gin` creates it's own http.ResponseWriter wrapper to catch all written data.
+That is why `httplog` could not handle it automatically.
+
+All you need is create wrapper, which set the response status and size manually from `Gin's` response writer wrapper.
+
+```go
+// httplog.ResponseWriter is not fully compatible with gin.ResponseWriter
+func LoggerMiddleware() gin.HandlerFunc {
+  return func(c *gin.Context) {
+    l := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+      // gin uses wrapped ResponseWriter, we don't want to replace it
+      // as gin use custom middleware approach with Next() method and context
+      c.Next()
+      // set result for ResponseWriter manually
+      rwr, _ := rw.(httplog.ResponseWriter)
+      rwr.Set(c.Writer.Status(), c.Writer.Size())
+    }))
+    l.ServeHTTP(c.Writer, c.Request)
+  }
+}
+
+//Use now this wrapper as native middleware
+r := gin.New()
+r.Use(LoggerMiddleware())
+r.GET("/happy", happyHandler)
+```
 
 ### Goji
 
