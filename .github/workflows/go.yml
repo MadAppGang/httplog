@@ -21,6 +21,9 @@ jobs:
     - name: Test
       run: go test -v ./...
 
+    - name: Go test coverage
+      run: go test -race -coverprofile=coverage.out -covermode=atomic
+
     - name: Coverage
       run: |
         curl -Os https://uploader.codecov.io/latest/linux/codecov
