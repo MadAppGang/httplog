@@ -4,6 +4,7 @@ Proudly created and supported by [MadAppGang](https://madappgang.com) company.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/MadAppGang/httplog.svg)](https://pkg.go.dev/github.com/MadAppGang/httplog)
 [![Go Report Card](https://goreportcard.com/badge/github.com/MadAppGang/httplog)](https://goreportcard.com/report/github.com/MadAppGang/httplog)
+[![codecov](https://codecov.io/gh/MadAppGang/httplog/branch/main/graph/badge.svg?token=BJT0WRNJS1)](https://codecov.io/gh/MadAppGang/httplog)
 
 ## Why?
 
