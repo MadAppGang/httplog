@@ -12,8 +12,8 @@ import (
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-// BodyLogFormatter format function with JSON body output or text
-func BodyLogFormatter(param LogFormatterParams) string {
+// ResponseBodyLogFormatter format function with JSON body output or text
+func ResponseBodyLogFormatter(param LogFormatterParams) string {
 	var blueColor, yellowColor, greenColor, resetColor string
 	if param.IsOutputColor() {
 		blueColor = blue
@@ -41,4 +41,4 @@ func BodyLogFormatter(param LogFormatterParams) string {
 }
 
 // DefaultLogFormatterWithHeadersAndBody is a combination of default log formatter, header log formatter and json body
-var DefaultLogFormatterWithHeadersAndBody = ChainLogFormatter(DefaultLogFormatter, HeadersLogFormatter, BodyLogFormatter)
+var DefaultLogFormatterWithResponseHeadersAndBody = ChainLogFormatter(DefaultLogFormatter, ResponseHeaderLogFormatter, ResponseBodyLogFormatter)

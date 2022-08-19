@@ -48,6 +48,16 @@ type LoggerConfig struct {
 	// Optional.
 	SkipPaths []string
 
+	// HideRequestHeaders is a list of request header keys you want to mask.
+	// You can use regex for for Header key name
+	// Optional.
+	HideRequestHeader []string
+
+	// HideResponseHeaders is a list of response header keys you want to mask.
+	// You can use regex for for Header key name
+	// Optional.
+	HideResponseHeader []string
+
 	// ProxyHandler is a instance of Proxy struct with could get remote IP using proxy data
 	// Default is default httplog.NewLogger()
 	// If you run you instance on Google App engine or Cloudflare,
@@ -92,6 +102,8 @@ type LogFormatterParams struct {
 	BodySize int
 	// Body is a body content, if body is copied
 	Body []byte
+	// Response header
+	ResponseHeader http.Header
 }
 
 // StatusCodeColor is the ANSI color for appropriately logging http status code to a terminal.
@@ -260,6 +272,7 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 
 			param.BodySize = wr.Size()
 			param.Body = wr.Body()
+			param.ResponseHeader = wr.Header()
 
 			param.RouterName = conf.RouterName
 

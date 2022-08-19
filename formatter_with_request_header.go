@@ -6,8 +6,8 @@ import "fmt"
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-// HeadersLogFormatter format function with headers output.
-func HeadersLogFormatter(param LogFormatterParams) string {
+// HeaderLogFormatter format function with headers output.
+func RequestHeaderLogFormatter(param LogFormatterParams) string {
 	output := ""
 	resetColor := param.ResetColor()
 	var blueColor, greenColor string
@@ -27,4 +27,4 @@ func HeadersLogFormatter(param LogFormatterParams) string {
 }
 
 // DefaultLogFormatterWithHeaders is a combination of default log formatter and header log formatter
-var DefaultLogFormatterWithHeaders = ChainLogFormatter(DefaultLogFormatter, HeadersLogFormatter)
+var DefaultLogFormatterWithRequestHeader = ChainLogFormatter(DefaultLogFormatter, RequestHeaderLogFormatter)
