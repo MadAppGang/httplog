@@ -10,7 +10,7 @@ import (
 // license that can be found in the LICENSE file.
 
 // DefaultLogFormatter is the default log format function Logger middleware uses.
-var DefaultLogFormatter = func(param LogFormatterParams) string {
+func DefaultLogFormatter(param LogFormatterParams) string {
 	var statusColor, methodColor, resetColor string
 	if param.IsOutputColor() {
 		statusColor = param.StatusCodeColor()
