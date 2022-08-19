@@ -1,0 +1,3 @@
+package httplog
+
+var FullFormatterWithRequestAndResponseHeadersAndBody = ChainLogFormatter(DefaultLogFormatter, RequestHeaderLogFormatter, RequestBodyLogFormatter, ResponseHeaderLogFormatter, ResponseBodyLogFormatter)

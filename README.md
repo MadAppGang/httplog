@@ -11,6 +11,12 @@ Proudly created and supported by [MadAppGang](https://madappgang.com) company.
 Every single web framework has a build-in logger already, why do we need on more?
 The question is simple and the answer is not.
 
+The best logger is structured logger, like [Uber Zap](https://github.com/uber-go/zap). Structure logs are essentials today to help collect and analyze logs with monitoring tools like ElasticSearch or DataDog.
+
+But what about humans? Obviously you can go to your monitoring tool and parse your structured logs. But what about seeing human readable logs in place just in console? Although you can read JSON, it is extremely hard to find most critical information in the large JSON data flow.
+
+Httplog package brings good for humans and log collection systems, you can use tools like zap to create structured logs and see colored beautiful human-friendly output in console in place. Win-win for human and machines 🤖❤️👩🏽‍💻
+
 Nice and clean output is critical for any web framework. Than is why some people use go web frameworks just to get beautiful logs.
 
 This library brings you fantastic http logs to any web framework, even if you use native `net/http` for that.
@@ -71,6 +77,11 @@ You can modify formatter as you want. Now there are two formatter available:
 - `DefaultLogFormatterWithHeaders`
 - `BodyLogFormatter`
 - `DefaultLogFormatterWithHeadersAndBody`
+- `RequestHeaderLogFormatter`
+- `DefaultLogFormatterWithRequestHeader`
+- `RequestBodyLogFormatter`
+- `DefaultLogFormatterWithRequestHeadersAndBody`
+- `FullFormatterWithRequestAndResponseHeadersAndBody`
 
 And you can combine them using `ChainLogFormatter`.
 

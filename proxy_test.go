@@ -21,7 +21,6 @@ func setRemoteIPHeaders(r *http.Request) {
 }
 
 func TestContextClientIP(t *testing.T) {
-	// recorder := httptest.NewRecorder()
 	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", nil)
 	setRemoteIPHeaders(request)
 	// default proxy
