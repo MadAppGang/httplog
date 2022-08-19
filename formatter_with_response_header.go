@@ -8,13 +8,12 @@ import "fmt"
 
 // ResponseHeaderLogFormatter format function with headers output.
 func ResponseHeaderLogFormatter(param LogFormatterParams) string {
-	output := ""
-	resetColor := param.ResetColor()
-	var blueColor, greenColor string
+	var blueColor, greenColor, resetColor, output string
 
 	if param.IsOutputColor() {
 		blueColor = "\033[1;34m"
 		greenColor = "\033[;32m"
+		resetColor = param.ResetColor()
 	}
 	for key, value := range param.ResponseHeader {
 		output += fmt.Sprintf("  %s %s %s: %s %s %s\n",

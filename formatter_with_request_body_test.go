@@ -59,6 +59,27 @@ func TestRequestBodyLogFormatterEmpty(t *testing.T) {
 	)
 }
 
+func TestRequestBodyLogFormatterEmptyColor(t *testing.T) {
+	timeStamp := time.Unix(1544173902, 0).UTC()
+
+	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", nil)
+	emptyBodyParams := LogFormatterParams{
+		Request:    request,
+		RouterName: "TEST",
+		TimeStamp:  timeStamp,
+		StatusCode: 200,
+		Latency:    time.Second * 5,
+		ClientIP:   "20.20.20.20",
+		Method:     "GET",
+		Path:       "/",
+		isTerm:     true,
+	}
+	assert.Equal(t,
+		"===\n\x1b[90;43m EMPTY BODY \x1b[0m\n===\n",
+		RequestBodyLogFormatter(emptyBodyParams),
+	)
+}
+
 func TestRequestBodyLogFormatterText(t *testing.T) {
 	timeStamp := time.Unix(1544173902, 0).UTC()
 

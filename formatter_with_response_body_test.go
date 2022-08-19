@@ -38,6 +38,23 @@ func TestResponseBodyLogFormatterText(t *testing.T) {
 	)
 }
 
+func TestResponseBodyLogFormatterTextColor(t *testing.T) {
+	bodyParams := LogFormatterParams{
+		RouterName: "TEST",
+		StatusCode: 200,
+		ClientIP:   "20.20.20.20",
+		Method:     "GET",
+		Body:       []byte("I am text body!"),
+		Path:       "/",
+		isTerm:     true,
+	}
+
+	assert.Equal(t,
+		"===\n\x1b[97;44m TEXT BODY:\x1b[0m\nI am text body!\n===\n",
+		ResponseBodyLogFormatter(bodyParams),
+	)
+}
+
 func TestResponseBodyLogFormatterJSON(t *testing.T) {
 	bodyParams := LogFormatterParams{
 		RouterName: "TEST",
