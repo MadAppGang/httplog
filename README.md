@@ -50,6 +50,7 @@ Here is a main features:
   - [goji](https://github.com/MadAppGang/httplog/blob/main/examples/goji/main.go)
   - [gorilla mux](https://github.com/MadAppGang/httplog/blob/main/examples/gorilla/main.go)
   - [httprouter](https://github.com/MadAppGang/httplog/blob/main/examples/httprouter/main.go)
+  - [mojito](https://github.com/MadAppGang/httplog/blob/main/examples/mojito/main.go)
   - [negroni](https://github.com/MadAppGang/httplog/blob/main/examples/negroni/main.go)
   - [native net/http](https://github.com/MadAppGang/httplog/blob/main/examples/nethttp/main.go)
   - not found yours? let us know and we will add it
@@ -69,7 +70,7 @@ Httplog has only one dependency at all: `github.com/mattn/go-isatty`. So it's wi
 
 ## Custom format
 
-You can modify formatter as you want. Now there are two formatter available: 
+You can modify formatter as you want. Now there are two formatter available:
 
 - `DefaultLogFormatter`
 - `ShortLogFormatter`
@@ -92,7 +93,7 @@ Here is an example of formatter in code:
 shortLoggedHandler := httplog.LoggerWithFormatter(
   httplog.ShortLogFormatter,
   wrappedHandler,
-)    
+)
 ```
 
 You can define your own log format. Log formatter is a function with a set of precalculated parameters:
@@ -170,7 +171,7 @@ logger := LoggerWithWriter(buffer, handler) //all output is written to buffer
 
 You application is operating behind load balancers and reverse proxies. That is why origination IP address is changing on every hop.
 To save the first sender's IP (real user remote IP) reverse proxies should save original IP in request headers.
-Default headers are `X-Forwarded-For` and  `X-Real-IP`.
+Default headers are `X-Forwarded-For` and `X-Real-IP`.
 
 But some clouds have custom headers, like Cloudflare and Google Apps Engine.
 If you are using those clouds or have custom headers in you environment, you can handle that by using custom `Proxy` init parameters:
@@ -189,7 +190,7 @@ or if you have your custom headers:
 logger := httplog.LoggerWithConfig(
   httplog.LoggerConfig{
     ProxyHandler: NewProxyWithTypeAndHeaders(
-      httpdlog.ProxyDefaultType, 
+      httpdlog.ProxyDefaultType,
       []string{"My-HEADER-NAME", "OTHER-HEADER-NAME"}
     ),
   },
@@ -210,8 +211,8 @@ You can combine your custom Formatter and `HeadersLogFormatter` or/and `BodyLogF
 
 ```go
 var myFormatter = httplog.ChainLogFormatter(
-  MyLogFormatter, 
-  httplog.HeadersLogFormatter, 
+  MyLogFormatter,
+  httplog.HeadersLogFormatter,
   httplog.BodyLogFormatter,
 )
 ```
@@ -395,6 +396,15 @@ router.GET("/happy", LoggerMiddleware(happyHandler))
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/httprouter/main.go).
+
+### Mojito
+Because Go-Mojito uses dynamic handler functions, which include support for net/http types, httplog works out-of-the-box:  
+
+```go
+mojito.WithMiddleware(httplog.Logger)
+mojito.GET("/happy", happyHandler)
+```
+Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/mojito/main.go).
 
 ### Negroni
 
