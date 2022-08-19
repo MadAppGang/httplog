@@ -236,15 +236,12 @@ Full example [could be found here](https://github.com/MadAppGang/httplog/blob/ma
 
 Alice is a fantastic lightweight framework to chain and manage middlewares. As Alice is using canonical approach, it is working with httplog out-of-the-box.
 
-All you need is to define middleware wrapper:
+You don't need any wrappers and you can user logger directly:
 
 ```golang
-func LoggerMiddleware(h http.Handler) http.Handler {
-   return httplog.Logger(h)
-}
 
 .....
-chain := alice.New(LoggerMiddleware, nosurf.NewPure)
+chain := alice.New(httplog.Logger, nosurf.NewPure)
 mux.Handle("/happy", chain.Then(happyHandler()))
 ```
 
@@ -252,15 +249,14 @@ Full example [could be found here](https://github.com/MadAppGang/httplog/blob/ma
 
 ### Chi
 
-Chi is a router which uses the standard approach as `Alice` package. All you need is to create simple handler wrapper and use it as native Chi middleware:
+Chi is a router which uses the standard approach as `Alice` package.
+
+You don't need any wrappers and you can user logger directly:
 
 ```go
-func LoggerMiddleware(h http.Handler) http.Handler {
-  return httplog.Logger(h)
-}
 
 r := chi.NewRouter()
-r.Use(LoggerMiddleware)
+r.Use(httplog.Logger)
 r.Get("/happy", happyHandler)
 ...
 
@@ -360,16 +356,13 @@ Full example [could be found here](https://github.com/MadAppGang/httplog/blob/ma
 Gorilla mux is one of the most loved muxer/router.
 Gorilla is using canonical middleware approach, that is why it is working with httplog out-of-the-box.
 
-You need to create simple Handler wrapper:
+You don't need to create any wrappers:
 
 ```go
-func LoggerMiddleware(h http.Handler) http.Handler {
-  return httplog.Logger(h)
-}
 
 r := mux.NewRouter()
 r.HandleFunc("/happy", happyHandler)
-r.Use(LoggerMiddleware)
+r.Use(httplog.Logger)
 
 ```
 

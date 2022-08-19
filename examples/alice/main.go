@@ -18,16 +18,12 @@ func happyHandler() http.Handler {
 	return http.HandlerFunc(h)
 }
 
-func LoggerMiddleware(h http.Handler) http.Handler {
-	return httplog.Logger(h)
-}
-
 func main() {
 	// setup routes
 	mux := http.NewServeMux()
 
 	// create reusable middleware chain
-	chain := alice.New(LoggerMiddleware, nosurf.NewPure)
+	chain := alice.New(httplog.Logger, nosurf.NewPure)
 
 	mux.Handle("/happy", chain.Then(happyHandler()))
 	mux.Handle("/not_found", chain.Then(http.NotFoundHandler()))

@@ -14,15 +14,11 @@ func happyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("I am happy!"))
 }
 
-func LoggerMiddleware(h http.Handler) http.Handler {
-	return httplog.Logger(h)
-}
-
 func main() {
 	// setup routes
 	r := chi.NewRouter()
 
-	r.Use(LoggerMiddleware)
+	r.Use(httplog.Logger)
 	r.Get("/happy", happyHandler)
 	r.Post("/happy", happyHandler)
 	r.Post("/not_found", http.NotFound)

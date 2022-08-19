@@ -14,16 +14,12 @@ func happyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("I am happy!"))
 }
 
-func LoggerMiddleware(h http.Handler) http.Handler {
-	return httplog.Logger(h)
-}
-
 func main() {
 	// setup routes
 	r := mux.NewRouter()
 	r.HandleFunc("/happy", happyHandler)
 	r.HandleFunc("/not_found", http.NotFound)
-	r.Use(LoggerMiddleware)
+	r.Use(httplog.Logger)
 
 	go func() {
 		fmt.Println("Server started at port 3333")
