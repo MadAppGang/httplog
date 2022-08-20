@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -45,18 +46,13 @@ type LoggerConfig struct {
 	Output io.Writer
 
 	// SkipPaths is an url path array which logs are not written.
+	// Could be a regexp like: /user/payment/*
 	// Optional.
 	SkipPaths []string
 
-	// HideRequestHeaders is a list of request header keys you want to mask.
-	// You can use regex for for Header key name
+	// HideHeader is a header keys array which value should be masked with ****.
 	// Optional.
-	HideRequestHeader []string
-
-	// HideResponseHeaders is a list of response header keys you want to mask.
-	// You can use regex for for Header key name
-	// Optional.
-	HideResponseHeader []string
+	HideHeaderKeys []string
 
 	// ProxyHandler is a instance of Proxy struct with could get remote IP using proxy data
 	// Default is default httplog.NewLogger()
@@ -224,8 +220,6 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		out = DefaultWriter
 	}
 
-	notlogged := conf.SkipPaths
-
 	isTerm := true
 
 	if w, ok := out.(*os.File); !ok || os.Getenv("TERM") == "dumb" ||
@@ -233,13 +227,23 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		isTerm = false
 	}
 
-	var skip map[string]struct{}
+	var skipPath []*regexp.Regexp
+	for _, p := range conf.SkipPaths {
+		re, err := regexp.Compile(p)
+		if err == nil {
+			skipPath = append(skipPath, re)
+		} else {
+			fmt.Fprint(out, fmt.Sprintf("error parsing skip path regex, ignoring: %s", p))
+		}
+	}
 
-	if length := len(notlogged); length > 0 {
-		skip = make(map[string]struct{}, length)
-
-		for _, path := range notlogged {
-			skip[path] = struct{}{}
+	var hideHeaderKeys []*regexp.Regexp
+	for _, p := range conf.HideHeaderKeys {
+		re, err := regexp.Compile(p)
+		if err == nil {
+			hideHeaderKeys = append(hideHeaderKeys, re)
+		} else {
+			fmt.Fprint(out, fmt.Sprintf("error parsing header key regexp to hide, ignoring: %s", p))
 		}
 	}
 
@@ -255,8 +259,19 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		wr := NewWriter(w, conf.CaptureBody)
 		next.ServeHTTP(wr, r)
 
+		var skip bool
+		// check path for skip regexp set
+		for _, r := range skipPath {
+			if r.MatchString(path) {
+				skip = true
+				break
+			}
+		}
+
 		// Log only when path is not being skipped
-		if _, ok := skip[path]; !ok {
+		if skip == false {
+			r.Header = maskHeaderKeys(r.Header.Clone(), hideHeaderKeys)
+
 			param := LogFormatterParams{
 				Request: r,
 				isTerm:  isTerm,
@@ -272,7 +287,7 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 
 			param.BodySize = wr.Size()
 			param.Body = wr.Body()
-			param.ResponseHeader = wr.Header()
+			param.ResponseHeader = maskHeaderKeys(wr.Header().Clone(), hideHeaderKeys)
 
 			param.RouterName = conf.RouterName
 
@@ -285,4 +300,28 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 			fmt.Fprint(out, formatter(param))
 		}
 	})
+}
+
+func maskHeaderKeys(h http.Header, keys []*regexp.Regexp) http.Header {
+	for k, v := range h {
+		for _, rx := range keys {
+			if rx.MatchString(k) {
+				for iv, vv := range v {
+					h[k][iv] = masked(vv)
+				}
+			}
+		}
+	}
+	return h
+}
+
+// returns ten asterisks for short string
+// and first and last runes with ten asterisks between for long strings
+func masked(s string) string {
+	if len(s) < 10 {
+		return "**********"
+	} else {
+		runes := []rune(s)
+		return string(runes[0:1]) + "**********" + string(runes[len(runes)-1:])
+	}
 }

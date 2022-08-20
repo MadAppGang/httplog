@@ -167,6 +167,39 @@ buffer := new(bytes.Buffer)
 logger := LoggerWithWriter(buffer, handler) //all output is written to buffer
 ```
 
+## Care about secrets. Skipping path and masking headers
+
+Some destinations should not be logged. For that purpose logger config has `SkipPaths` property with array of strings. Each string is a Regexp for path you want to skip. You can write exact path to skip, which would be valid regexp, or you can use regexp power:
+
+```go
+
+logger := LoggerWithConfig(LoggerConfig{
+  SkipPaths: []string{
+    "/skipped",
+    "/payments/\\w+",
+    "/user/[0-9]+",
+  },
+}, handler)
+
+
+The other feature to safe your logs from leaking secrets is Header masking. For example you do not want to log Bearer token header, but it is  useful to see it is present and not empty.
+
+For this purpose `LoggerConfig` has field `HideHeaderKeys` which works the same as `SkipPaths`. Just feed an array of case insensitive key names regexps like that:
+
+```go
+
+logger := LoggerWithConfig(LoggerConfig{
+  HideHeaderKeys: []string{
+    "Bearer",
+    "Secret-Key",
+    "Cookie",
+  },
+}, handler)
+
+```
+
+If regexp is failed to compile, the logger will skip and and it will write the message to the log output destination.
+
 ## Use GoogleApp Engine or CloudFlare
 
 You application is operating behind load balancers and reverse proxies. That is why origination IP address is changing on every hop.
