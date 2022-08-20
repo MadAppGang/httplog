@@ -319,8 +319,12 @@ func TestLoggerWithWriterSkippingPaths(t *testing.T) {
 func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	logger := LoggerWithConfig(LoggerConfig{
-		Output:    buffer,
-		SkipPaths: []string{"/skipped"},
+		Output: buffer,
+		SkipPaths: []string{
+			"/skipped",
+			"/payments/\\w+",
+			"/user/[0-9]+",
+		},
 	}, testHandler200("I am good!"))
 
 	PerformRequest(logger, "GET", "/logged")
@@ -329,6 +333,30 @@ func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 	buffer.Reset()
 	PerformRequest(logger, "GET", "/skipped")
 	assert.Contains(t, buffer.String(), "")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/payments")
+	assert.Contains(t, buffer.String(), "200")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/payments/")
+	assert.Contains(t, buffer.String(), "200")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/payments/1")
+	assert.Contains(t, buffer.String(), "")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/payments/abcd")
+	assert.Contains(t, buffer.String(), "")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/PaYments/2Uf")
+	assert.Contains(t, buffer.String(), "")
+
+	buffer.Reset()
+	PerformRequest(logger, "GET", "/PaYments/2Uf()")
+	assert.Contains(t, buffer.String(), "200")
 }
 
 func TestDisableConsoleColor(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/mattn/go-isatty"
@@ -45,8 +46,13 @@ type LoggerConfig struct {
 	Output io.Writer
 
 	// SkipPaths is an url path array which logs are not written.
+	// Could be a regexp like: /user/payment/*
 	// Optional.
 	SkipPaths []string
+
+	// HideHeader is a header keys array which value should be masked with ****.
+	// Optional.
+	HideHeaderKeys []string
 
 	// HideRequestHeaders is a list of request header keys you want to mask.
 	// You can use regex for for Header key name
@@ -224,8 +230,6 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		out = DefaultWriter
 	}
 
-	notlogged := conf.SkipPaths
-
 	isTerm := true
 
 	if w, ok := out.(*os.File); !ok || os.Getenv("TERM") == "dumb" ||
@@ -233,13 +237,14 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		isTerm = false
 	}
 
-	var skip map[string]struct{}
-
-	if length := len(notlogged); length > 0 {
-		skip = make(map[string]struct{}, length)
-
-		for _, path := range notlogged {
-			skip[path] = struct{}{}
+	var skipPath []*regexp.Regexp
+	for _, p := range conf.SkipPaths {
+		re, err := regexp.Compile(p)
+		if err == nil {
+			skipPath = append(skipPath, re)
+		} else {
+			// log about regex? better logging for logging library????
+			fmt.Fprint(out, fmt.Sprintf("error parsing skip path regex, ignoring: %s", p))
 		}
 	}
 
@@ -255,8 +260,17 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		wr := NewWriter(w, conf.CaptureBody)
 		next.ServeHTTP(wr, r)
 
+		var skip bool
+		// check path for skip regexp set
+		for _, r := range skipPath {
+			if r.MatchString(path) {
+				skip = true
+				break
+			}
+		}
+
 		// Log only when path is not being skipped
-		if _, ok := skip[path]; !ok {
+		if skip == false {
 			param := LogFormatterParams{
 				Request: r,
 				isTerm:  isTerm,
