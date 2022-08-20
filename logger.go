@@ -54,16 +54,6 @@ type LoggerConfig struct {
 	// Optional.
 	HideHeaderKeys []string
 
-	// HideRequestHeaders is a list of request header keys you want to mask.
-	// You can use regex for for Header key name
-	// Optional.
-	HideRequestHeader []string
-
-	// HideResponseHeaders is a list of response header keys you want to mask.
-	// You can use regex for for Header key name
-	// Optional.
-	HideResponseHeader []string
-
 	// ProxyHandler is a instance of Proxy struct with could get remote IP using proxy data
 	// Default is default httplog.NewLogger()
 	// If you run you instance on Google App engine or Cloudflare,
@@ -243,8 +233,17 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 		if err == nil {
 			skipPath = append(skipPath, re)
 		} else {
-			// log about regex? better logging for logging library????
 			fmt.Fprint(out, fmt.Sprintf("error parsing skip path regex, ignoring: %s", p))
+		}
+	}
+
+	var hideHeaderKeys []*regexp.Regexp
+	for _, p := range conf.HideHeaderKeys {
+		re, err := regexp.Compile(p)
+		if err == nil {
+			hideHeaderKeys = append(hideHeaderKeys, re)
+		} else {
+			fmt.Fprint(out, fmt.Sprintf("error parsing header key regexp to hide, ignoring: %s", p))
 		}
 	}
 
@@ -271,6 +270,8 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 
 		// Log only when path is not being skipped
 		if skip == false {
+			r.Header = maskHeaderKeys(r.Header.Clone(), hideHeaderKeys)
+
 			param := LogFormatterParams{
 				Request: r,
 				isTerm:  isTerm,
@@ -286,7 +287,7 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 
 			param.BodySize = wr.Size()
 			param.Body = wr.Body()
-			param.ResponseHeader = wr.Header()
+			param.ResponseHeader = maskHeaderKeys(wr.Header().Clone(), hideHeaderKeys)
 
 			param.RouterName = conf.RouterName
 
@@ -299,4 +300,28 @@ func LoggerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
 			fmt.Fprint(out, formatter(param))
 		}
 	})
+}
+
+func maskHeaderKeys(h http.Header, keys []*regexp.Regexp) http.Header {
+	for k, v := range h {
+		for _, rx := range keys {
+			if rx.MatchString(k) {
+				for iv, vv := range v {
+					h[k][iv] = masked(vv)
+				}
+			}
+		}
+	}
+	return h
+}
+
+// returns ten asterisks for short string
+// and first and last runes with ten asterisks between for long strings
+func masked(s string) string {
+	if len(s) < 10 {
+		return "**********"
+	} else {
+		runes := []rune(s)
+		return string(runes[0:1]) + "**********" + string(runes[len(runes)-1:])
+	}
 }

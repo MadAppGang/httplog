@@ -45,6 +45,20 @@ func testHandler200(returnString string) http.Handler {
 	})
 }
 
+// testHandlerHeaders returns sample data with 200 status code
+// and additional headers
+func testHandlerHeaders(returnString string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Add("Bearer", "Token qwertyuupofkfmnvjdfkglkgjfhnfjgjkgklgfkjfjf")
+		w.Header().Add("Secret2", "протестуємо юнікод літери та такст")
+		w.Header().Add("Secret2", "Слава Україні")
+		w.Header().Add("Secret2", "test multiple values for header")
+		w.Header().Add("Something", "whatever you want")
+		w.Write([]byte(returnString))
+	})
+}
+
 func TestLogger(t *testing.T) {
 	buffer := new(bytes.Buffer)
 
@@ -357,6 +371,52 @@ func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 	buffer.Reset()
 	PerformRequest(logger, "GET", "/PaYments/2Uf()")
 	assert.Contains(t, buffer.String(), "200")
+}
+
+func TestLoggerWithConfigMaskingHeaders(t *testing.T) {
+	buffer := new(bytes.Buffer)
+	logger := LoggerWithConfig(LoggerConfig{
+		Output: buffer,
+		HideHeaderKeys: []string{
+			"^Bearer",
+			"^Cookie",
+			"^Secret\\w*",
+		},
+		Formatter: FullFormatterWithRequestAndResponseHeadersAndBody,
+	}, testHandlerHeaders("I am good!"))
+
+	PerformRequest(logger, "GET", "/logged",
+		header{
+			Key:   "Bearer",
+			Value: "token ABCDSABCDSABCDSABCDSABCDSABCDSABCDSABCDSABCDS",
+		},
+		header{
+			Key:   "Not-Secret",
+			Value: "not a secret value",
+		},
+		header{
+			Key:   "Secret_1",
+			Value: "Secret1",
+		},
+		header{
+			Key:   "Secret",
+			Value: "SingleSecret",
+		},
+	)
+	assert.Contains(t, buffer.String(), "200")
+	assert.NotContains(t, buffer.String(), "ABCDSABCDSABCDSABCDSABCDSABCDSABCDSABCDSABCDS")
+	assert.NotContains(t, buffer.String(), "Secret1")
+	assert.NotContains(t, buffer.String(), "SingleSecret")
+	assert.Contains(t, buffer.String(), "Secret_1")
+	assert.Contains(t, buffer.String(), "Secret")
+	assert.Contains(t, buffer.String(), "Not-Secret")
+	assert.Contains(t, buffer.String(), "not a secret value")
+
+	// response header
+	assert.Contains(t, buffer.String(), "T**********f")
+	assert.Contains(t, buffer.String(), "п**********т")
+	assert.Contains(t, buffer.String(), "С**********і")
+	assert.Contains(t, buffer.String(), "whatever you want")
 }
 
 func TestDisableConsoleColor(t *testing.T) {
