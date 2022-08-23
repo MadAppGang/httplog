@@ -40,6 +40,10 @@ And actual code looks like this:
 
 All you need is wrap you handler with `httplog.Logger` and the magic happens.
 
+And this is how the structured logs looks in AWS CloudWatch. As you can see, the color output looks not as good here as in console. But JSON structured logs are awesome 😍
+
+![structured logs](docs/structured_logs.com.png)
+
 Here is a main features:
 
 - framework agnostic (could be easily integrated with any web framework), you can find `examples` for:
