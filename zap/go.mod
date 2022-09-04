@@ -5,7 +5,7 @@ go 1.19
 replace github.com/MadAppGang/httplog => ../
 
 require (
-	github.com/MadAppGang/httplog v0.0.0-00010101000000-000000000000
+	github.com/MadAppGang/httplog v1.2.0
 	go.uber.org/zap v1.22.0
 )
 
