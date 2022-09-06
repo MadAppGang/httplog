@@ -45,7 +45,7 @@ func TestContextClientIP(t *testing.T) {
 
 	// no port
 	request.RemoteAddr = "50.50.50.50"
-	assert.Empty(t, googleProxy.ClientIP(request))
+	assert.NotEmpty(t, googleProxy.ClientIP(request))
 
 	// X-Forwarded-For has a non-IP element
 	request.Header.Set("X-Forwarded-For", " blah ")
@@ -80,5 +80,14 @@ func TestContextClientIP(t *testing.T) {
 
 	// no port
 	request.RemoteAddr = "50.50.50.50"
-	assert.Empty(t, dp.ClientIP(request))
+	assert.NotEmpty(t, dp.ClientIP(request))
+
+	// no remote IP
+	customProxy = httplog.NewProxy()
+	setRemoteIPHeaders(request)
+	request.RemoteAddr = "10.0.0.170:11078"
+	request.Header.Set("X-Forwarded-For", "[119.18.0.222]") // real aws application load balancer example
+	request.Header.Del("X-Real-IP")
+	assert.NotEmpty(t, dp.ClientIP(request))
+	assert.Equal(t, "119.18.0.222", customProxy.ClientIP(request))
 }
