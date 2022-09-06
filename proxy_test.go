@@ -85,7 +85,9 @@ func TestContextClientIP(t *testing.T) {
 	// no remote IP
 	customProxy = httplog.NewProxy()
 	setRemoteIPHeaders(request)
-	request.RemoteAddr = ""
+	request.RemoteAddr = "10.0.0.170:11078"
+	request.Header.Set("X-Forwarded-For", "[119.18.0.222]") // real aws application load balancer example
+	request.Header.Del("X-Real-IP")
 	assert.NotEmpty(t, dp.ClientIP(request))
-	assert.Equal(t, "20.20.20.20", customProxy.ClientIP(request))
+	assert.Equal(t, "119.18.0.222", customProxy.ClientIP(request))
 }

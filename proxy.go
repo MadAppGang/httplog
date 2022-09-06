@@ -90,6 +90,8 @@ func (p *Proxy) validateHeader(header string) (clientIP string, valid bool) {
 	if header == "" {
 		return "", false
 	}
+	header = strings.ReplaceAll(header, "[", "")
+	header = strings.ReplaceAll(header, "]", "")
 	items := strings.Split(header, ",")
 	// we are getting the first ip in the list, which should refer to client's ip in proxy chain
 	if len(items) > 0 {
