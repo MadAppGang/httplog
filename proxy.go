@@ -72,17 +72,7 @@ func (p *Proxy) ClientIP(r *http.Request) string {
 		}
 	}
 
-	// It also checks if the remoteIP is a trusted proxy or not.
-	// In order to perform this validation, it will see if the IP is contained within at least one of the CIDR blocks
 	remoteIP := net.ParseIP(RemoteIP(r))
-	if remoteIP == nil {
-		return ""
-	}
-
-	// we can support proxies only from trusted subnets
-	// defined by Engine.SetTrustedProxies()
-	// for details please look: gin: Engine.trustedCIDRs
-	// trusted := c.engine.isTrustedProxy(remoteIP)
 
 	if p.RemoteIPHeaders != nil {
 		for _, headerName := range p.RemoteIPHeaders {
