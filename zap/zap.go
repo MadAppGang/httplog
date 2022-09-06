@@ -42,7 +42,7 @@ func DefaultZapLogger(zl *zap.Logger, level zapcore.Level, message string) httpl
 func DefaultZapLoggerWithHeaders(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
 	return httplog.ChainLogFormatter(
 		httplog.DefaultLogFormatter,
-		httplog.HeadersLogFormatter,
+		httplog.RequestHeaderLogFormatter,
 		ZapLogger(zl, level, message),
 	)
 }
@@ -51,8 +51,8 @@ func DefaultZapLoggerWithHeaders(zl *zap.Logger, level zapcore.Level, message st
 func DefaultZapLoggerWithHeadersAndBody(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
 	return httplog.ChainLogFormatter(
 		httplog.DefaultLogFormatter,
-		httplog.HeadersLogFormatter,
-		httplog.BodyLogFormatter,
+		httplog.RequestHeaderLogFormatter,
+		httplog.RequestBodyLogFormatter,
 		ZapLogger(zl, level, message),
 	)
 }
