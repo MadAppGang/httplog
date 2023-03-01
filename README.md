@@ -38,6 +38,7 @@ And actual code looks like this:
   }
 ```
 
+
 All you need is wrap you handler with `httplog.Logger` and the magic happens.
 
 And this is how the structured logs looks in AWS CloudWatch. As you can see, the color output looks not as good here as in console. But JSON structured logs are awesome 😍
@@ -309,30 +310,18 @@ Echo middleware uses internal `echo.Context` to manage request/responser flow an
 As a result, `echo` creates it's own http.ResponseWriter wrapper to catch all written data.
 That is why `httplog` could not handle it automatically.
 
-All you need is create wrapper, which set the response status and size manually from `echo's` response writer wrapper.
+To handle that there is a package `httplog/chilog` which has all the native echo middlewares to use:
+
 
 ```go
-func loggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-  return func(c echo.Context) error {
-    logger := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-      if err := next(c); err != nil {
-]      c.Error(err)
-      }
-      // echo is overwriting http.ResponseWriter to proxy data write (c.Response() as echo.Response type)
-      // we just need manually bring this data back to our log's response writer (rw variable)
-      lrw, _ := rw.(httplog.ResponseWriter)
-      lrw.Set(c.Response().Status, int(c.Response().Size))
-    }))
+	e := echo.New()
 
-    logger.ServeHTTP(c.Response().Writer, c.Request())
-    return nil
-  }
-}
+	// Middleware
+	e.Use(echolog.LoggerWithName("ECHO NATIVE"))
+	e.GET("/happy", happyHandler)
+	e.POST("/happy", happyHandler)
+	e.GET("/not_found", echo.NotFoundHandler)
 
-//use this as native echo middleware:
-e := echo.New()
-e.Use(loggerMiddleware)11
-e.GET("/happy", happyHandler)
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/echo/main.go).
@@ -350,28 +339,15 @@ That is why we created `httplog`, to bring this fantastic logger to native golan
 `Gin` creates it's own http.ResponseWriter wrapper to catch all written data.
 That is why `httplog` could not handle it automatically.
 
-All you need is create wrapper, which set the response status and size manually from `Gin's` response writer wrapper.
+To handle that there is a package `httplog/ginlog` which has all the native gin middlewares to use:
+
 
 ```go
-// httplog.ResponseWriter is not fully compatible with gin.ResponseWriter
-func LoggerMiddleware() gin.HandlerFunc {
-  return func(c *gin.Context) {
-    l := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-      // gin uses wrapped ResponseWriter, we don't want to replace it
-      // as gin use custom middleware approach with Next() method and context
-      c.Next()
-      // set result for ResponseWriter manually
-      rwr, _ := rw.(httplog.ResponseWriter)
-      rwr.Set(c.Writer.Status(), c.Writer.Size())
-    }))
-    l.ServeHTTP(c.Writer, c.Request)
-  }
-}
-
-//Use now this wrapper as native middleware
-r := gin.New()
-r.Use(LoggerMiddleware())
-r.GET("/happy", happyHandler)
+  r := gin.New()
+	r.Use(ginlog.LoggerWithName("I AM GIN ROUTER"))
+	r.GET("/happy", happyHandler)
+	r.POST("/happy", happyHandler)
+	r.GET("/not_found", gin.WrapF(http.NotFound))
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/gin/main.go).
@@ -412,12 +388,13 @@ To use HTPPRouter you need to create simple wrapper. As HTTPRouter using custom 
 
 ```go
 func LoggerMiddleware(h httprouter.Handle) httprouter.Handle {
-  return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-    logger := httplog.Logger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-      h(w, r, ps)
-    }))
-    logger.ServeHTTP(w, r)
-  }
+	logger := httplog.LoggerWithName("ME")
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h(w, r, ps)
+		})
+		logger(handler).ServeHTTP(w, r)
+	}
 }
 
 //use as native middleware
