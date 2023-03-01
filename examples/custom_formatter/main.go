@@ -16,33 +16,30 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 func main() {
 	// setup routes
 	// Default log formatter
-	http.Handle("/happy", httplog.LoggerWithName("Default logger", happyHandler))
+	defaultLogger := httplog.LoggerWithName("Default logger")
+	http.Handle("/happy", defaultLogger(happyHandler))
 
 	// Short log formatter
-	shortLoggedHandler := httplog.LoggerWithFormatterAndName(
+	shortLogged := httplog.LoggerWithFormatterAndName(
 		"Short logger",
-		httplog.ShortLogFormatter,
-		happyHandler,
+		httplog.ShortLogFormatter, // log formatter implemented in httplog lib
 	)
-	http.Handle("/happy_short", shortLoggedHandler)
+	http.Handle("/happy_short", shortLogged(happyHandler))
 
 	// Custom log formatter
-	customLoggedHandler := httplog.LoggerWithFormatter(
+	customLogger := httplog.LoggerWithFormatter(func(param httplog.LogFormatterParams) string {
 		// formatter is a function, you can define your own
-		func(param httplog.LogFormatterParams) string {
-			statusColor := param.StatusCodeColor()
-			resetColor := param.ResetColor()
-			boldRedText := "\033[1;31m"
+		statusColor := param.StatusCodeColor()
+		resetColor := param.ResetColor()
+		boldRedText := "\033[1;31m"
 
-			return fmt.Sprintf("🥑[I am custom router!!!] %s %3d %s| size: %10d bytes | %s %#v %s 🔮👨🏻‍💻\n",
-				statusColor, param.StatusCode, resetColor,
-				param.BodySize,
-				boldRedText, param.Path, resetColor,
-			)
-		},
-		happyHandler,
-	)
-	http.Handle("/happy_custom", customLoggedHandler)
+		return fmt.Sprintf("🥑[I am custom router!!!] %s %3d %s| size: %10d bytes | %s %#v %s 🔮👨🏻‍💻\n",
+			statusColor, param.StatusCode, resetColor,
+			param.BodySize,
+			boldRedText, param.Path, resetColor,
+		)
+	})
+	http.Handle("/happy_custom", customLogger(happyHandler))
 
 	go func() {
 		fmt.Println("Server started at port 3333")

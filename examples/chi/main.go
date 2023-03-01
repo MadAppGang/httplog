@@ -18,7 +18,7 @@ func main() {
 	// setup routes
 	r := chi.NewRouter()
 
-	r.Use(httplog.Logger)
+	r.Use(httplog.LoggerWithName("CHI API"))
 	r.Get("/happy", happyHandler)
 	r.Post("/happy", happyHandler)
 	r.Post("/not_found", http.NotFound)

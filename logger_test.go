@@ -62,7 +62,7 @@ func testHandlerHeaders(returnString string) http.Handler {
 func TestLogger(t *testing.T) {
 	buffer := new(bytes.Buffer)
 
-	logger := LoggerWithWriter(buffer, testHandler200("Hello world!"))
+	logger := HandlerWithWriter(buffer, testHandler200("Hello world!"))
 
 	PerformRequest(logger, "GET", "/example?a=100")
 	assert.Contains(t, buffer.String(), "200")
@@ -111,7 +111,7 @@ func TestLogger(t *testing.T) {
 
 	buffer.Reset()
 
-	logger = LoggerWithWriter(buffer, http.NotFoundHandler())
+	logger = HandlerWithWriter(buffer, http.NotFoundHandler())
 	PerformRequest(logger, "GET", "/notfound")
 	assert.Contains(t, buffer.String(), "404")
 	assert.Contains(t, buffer.String(), "GET")
@@ -124,7 +124,7 @@ func TestLoggerWithConfig(t *testing.T) {
 	loggerConfig := LoggerConfig{
 		Output: buffer,
 	}
-	logger := LoggerWithConfig(loggerConfig, testHandler200("Hello world!"))
+	logger := HandlerWithConfig(loggerConfig, testHandler200("Hello world!"))
 	PerformRequest(logger, "GET", "/example?a=100")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "GET")
@@ -168,7 +168,7 @@ func TestLoggerWithConfig(t *testing.T) {
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	logger = LoggerWithWriter(buffer, http.NotFoundHandler())
+	logger = HandlerWithWriter(buffer, http.NotFoundHandler())
 	PerformRequest(logger, "GET", "/notfound")
 	assert.Contains(t, buffer.String(), "404")
 	assert.Contains(t, buffer.String(), "GET")
@@ -184,7 +184,7 @@ func TestLoggerWithFormatter(t *testing.T) {
 		DefaultWriter = d
 	}()
 
-	logger := LoggerWithFormatter(func(param LogFormatterParams) string {
+	logger := HandlerWithFormatter(func(param LogFormatterParams) string {
 		return fmt.Sprintf("[%s] %v | %3d | %13v | %15s | %-7s %#v\n",
 			"TEST",
 			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
@@ -209,7 +209,7 @@ func TestLoggerWithConfigFormatting(t *testing.T) {
 	var gotParam LogFormatterParams
 	buffer := new(bytes.Buffer)
 
-	logger := LoggerWithConfig(LoggerConfig{
+	logger := HandlerWithConfig(LoggerConfig{
 		Output:     buffer,
 		RouterName: "TEST ROUTER",
 		Formatter: func(param LogFormatterParams) string {
@@ -320,7 +320,7 @@ func TestIsOutputColor(t *testing.T) {
 
 func TestLoggerWithWriterSkippingPaths(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := LoggerWithWriter(buffer, testHandler200("I am good!"), "/skipped")
+	logger := HandlerWithWriter(buffer, testHandler200("I am good!"), "/skipped")
 
 	PerformRequest(logger, "GET", "/logged")
 	assert.Contains(t, buffer.String(), "200")
@@ -332,7 +332,7 @@ func TestLoggerWithWriterSkippingPaths(t *testing.T) {
 
 func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := LoggerWithConfig(LoggerConfig{
+	logger := HandlerWithConfig(LoggerConfig{
 		Output: buffer,
 		SkipPaths: []string{
 			"/skipped",
@@ -375,7 +375,7 @@ func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 
 func TestLoggerWithConfigMaskingHeaders(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := LoggerWithConfig(LoggerConfig{
+	logger := HandlerWithConfig(LoggerConfig{
 		Output: buffer,
 		HideHeaderKeys: []string{
 			"^Bearer",

@@ -23,7 +23,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// create reusable middleware chain
-	chain := alice.New(httplog.Logger, nosurf.NewPure)
+	chain := alice.New(httplog.LoggerWithName("ALICE"), nosurf.NewPure)
 
 	mux.Handle("/happy", chain.Then(happyHandler()))
 	mux.Handle("/not_found", chain.Then(http.NotFoundHandler()))

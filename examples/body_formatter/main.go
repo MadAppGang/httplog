@@ -22,23 +22,16 @@ func emptyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(""))
 }
 
-// let's create logger
-func logger(h http.HandlerFunc) http.Handler {
-	return httplog.LoggerWithConfig(
-		httplog.LoggerConfig{
-			RouterName:  "FillBodyFormatter",
-			Formatter:   httplog.DefaultLogFormatterWithHeadersAndBody,
-			CaptureBody: true,
-		},
-		http.HandlerFunc(h),
-	)
-}
-
 func main() {
+	logger := httplog.LoggerWithConfig(httplog.LoggerConfig{
+		RouterName:  "FillBodyFormatter",
+		Formatter:   httplog.DefaultLogFormatterWithResponseHeadersAndBody,
+		CaptureBody: true,
+	})
 	// setup routes
-	http.Handle("/empty", logger(emptyHandler))
-	http.Handle("/wrong", logger(notJSONHandler))
-	http.Handle("/happy", logger(happyHandler))
+	http.Handle("/empty", logger(http.HandlerFunc(emptyHandler)))
+	http.Handle("/wrong", logger(http.HandlerFunc(notJSONHandler)))
+	http.Handle("/happy", logger(http.HandlerFunc(happyHandler)))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
