@@ -6,25 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/echolog"
 	"github.com/labstack/echo/v4"
 )
-
-func loggerMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		logger := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			if err := next(c); err != nil {
-				c.Error(err)
-			}
-			// echo is overwriting http.ResponseWriter to proxy data write (c.Response() as echo.Response type)
-			// we just need manually bring this data back to our log's response writer (rw variable)
-			lrw, _ := rw.(httplog.ResponseWriter)
-			lrw.Set(c.Response().Status, int(c.Response().Size))
-		}))
-		logger.ServeHTTP(c.Response().Writer, c.Request())
-		return nil
-	}
-}
 
 func happyHandler(c echo.Context) error {
 	c.Response().Writer.Write([]byte("I am happy!"))
@@ -36,7 +20,7 @@ func main() {
 	e := echo.New()
 
 	// Middleware
-	e.Use(loggerMiddleware)
+	e.Use(echolog.LoggerWithName("ECHO NATIVE"))
 	e.GET("/happy", happyHandler)
 	e.POST("/happy", happyHandler)
 	e.GET("/not_found", echo.NotFoundHandler)
