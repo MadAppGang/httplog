@@ -19,7 +19,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/happy", happyHandler)
 	r.HandleFunc("/not_found", http.NotFound)
-	r.Use(httplog.Logger)
+	r.Use(httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithResponseHeader))
 
 	go func() {
 		fmt.Println("Server started at port 3333")

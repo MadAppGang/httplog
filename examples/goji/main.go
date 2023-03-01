@@ -18,9 +18,10 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 func main() {
 	// setup routes
 	mux := goji.NewMux()
-	mux.Handle(pat.Get("/happy"), httplog.Logger(happyHandler))
-	mux.Handle(pat.Post("/happy"), httplog.Logger(happyHandler))
-	mux.Handle(pat.Get("/not_found"), httplog.Logger(http.NotFoundHandler()))
+	logger := httplog.LoggerWithName("GOJI🫐")
+	mux.Handle(pat.Get("/happy"), logger(happyHandler))
+	mux.Handle(pat.Post("/happy"), logger(happyHandler))
+	mux.Handle(pat.Get("/not_found"), logger(http.NotFoundHandler()))
 
 	go func() {
 		fmt.Println("Server started at port 3333")

@@ -16,8 +16,8 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 
 // use function Curry pattern
 var negroniLoggerMiddleware negroni.Handler = negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	logger := httplog.Logger(next)
-	logger.ServeHTTP(rw, r)
+	logger := httplog.LoggerWithName("negroni") // setup your router here
+	logger(next).ServeHTTP(rw, r)
 })
 
 func main() {

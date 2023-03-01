@@ -11,11 +11,12 @@ import (
 )
 
 func LoggerMiddleware(h httprouter.Handle) httprouter.Handle {
+	logger := httplog.LoggerWithName("ME")
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		logger := httplog.Logger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h(w, r, ps)
-		}))
-		logger.ServeHTTP(w, r)
+		})
+		logger(handler).ServeHTTP(w, r)
 	}
 }
 

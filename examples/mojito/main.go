@@ -15,7 +15,7 @@ func happyHandler(ctx mojito.Context) error {
 
 func main() {
 	mojito.WithNotFoundHandler(httplog.Logger(http.NotFoundHandler()))
-	mojito.WithMiddleware(httplog.Logger)
+	mojito.WithMiddleware(httplog.LoggerWithName("🍸🍸🍸🍸"))
 	mojito.POST("/happy", happyHandler)
 	mojito.GET("/happy", happyHandler)
 

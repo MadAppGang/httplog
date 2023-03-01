@@ -6,24 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/ginlog"
 	"github.com/gin-gonic/gin"
 )
-
-// httplog.ResponseWriter is not fully compatible with gin.ResponseWriter
-func LoggerMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		l := httplog.Logger(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			// gin uses wrapped ResponseWriter, we don't want to replace it
-			// as gin use custom middleware approach with Next() method and context
-			c.Next()
-			// set result for ResponseWriter manually
-			rwr, _ := rw.(httplog.ResponseWriter)
-			rwr.Set(c.Writer.Status(), c.Writer.Size())
-		}))
-		l.ServeHTTP(c.Writer, c.Request)
-	}
-}
 
 var happyHandler = func(c *gin.Context) {
 	fmt.Println("I am happy handler")
@@ -33,7 +18,7 @@ var happyHandler = func(c *gin.Context) {
 func main() {
 	// setup routes
 	r := gin.New()
-	r.Use(LoggerMiddleware())
+	r.Use(ginlog.LoggerWithName("I AM GIN ROUTER"))
 	r.GET("/happy", happyHandler)
 	r.POST("/happy", happyHandler)
 	r.GET("/not_found", gin.WrapF(http.NotFound))

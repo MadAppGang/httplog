@@ -16,7 +16,8 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 
 func main() {
 	// setup routes
-	http.Handle("/happy", httplog.LoggerWithFormatter(httplog.DefaultLogFormatter, happyHandler))
+	loggerWithFormatter := httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithRequestHeader)
+	http.Handle("/happy", loggerWithFormatter(happyHandler))
 	http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
 
 	go func() {

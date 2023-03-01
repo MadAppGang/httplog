@@ -24,23 +24,17 @@ func emptyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(""))
 }
 
-// let's create logger
-func logger(h http.HandlerFunc, l *zap.Logger) http.Handler {
-	return httplog.LoggerWithConfig(
-		httplog.LoggerConfig{
-			RouterName: "FillBodyFormatter",
-			Formatter:  lzap.DefaultZapLogger(l, zap.InfoLevel, ""),
-		},
-		http.HandlerFunc(h),
-	)
-}
-
 func main() {
 	// setup routes
 	z, _ := zap.NewDevelopment()
 	defer z.Sync() // flushes buffer, if any
 
-	http.Handle("/happy", logger(happyHandler, z))
+	logger := httplog.LoggerWithConfig(httplog.LoggerConfig{
+		RouterName: "FillBodyFormatter",
+		Formatter:  lzap.DefaultZapLogger(z, zap.InfoLevel, ""),
+	})
+
+	http.Handle("/happy", logger(http.HandlerFunc(happyHandler)))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
