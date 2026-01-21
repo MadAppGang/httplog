@@ -1,11 +1,11 @@
-module github.com/MadAppGang/httplog/examples/gorilla
+module github.com/MadAppGang/httplog/v2/examples/gorilla
 
-go 1.19
+go 1.21
 
-replace github.com/MadAppGang/httplog => ../..
+replace github.com/MadAppGang/httplog/v2 => ../..
 
 require (
-	github.com/MadAppGang/httplog v0.0.0-00010101000000-000000000000
+	github.com/MadAppGang/httplog/v2 v2.0.0
 	github.com/gorilla/mux v1.8.0
 )
 

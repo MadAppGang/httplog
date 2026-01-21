@@ -1,14 +1,14 @@
-module github.com/MadAppGang/httplog/examples/zap
+module github.com/MadAppGang/httplog/v2/examples/zap
 
-go 1.19
+go 1.21
 
-replace github.com/MadAppGang/httplog => ../..
+replace github.com/MadAppGang/httplog/v2 => ../..
 
-replace github.com/MadAppGang/httplog/zap => ../../zap
+replace github.com/MadAppGang/httplog/v2/zap => ../../zap
 
 require (
-	github.com/MadAppGang/httplog v1.2.0
-	github.com/MadAppGang/httplog/zap v0.0.0-00010101000000-000000000000
+	github.com/MadAppGang/httplog/v2 v2.0.0
+	github.com/MadAppGang/httplog/v2/zap v0.0.0-00010101000000-000000000000
 	go.uber.org/zap v1.22.0
 )
 

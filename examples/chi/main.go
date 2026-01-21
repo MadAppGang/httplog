@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -18,7 +18,11 @@ func main() {
 	// setup routes
 	r := chi.NewRouter()
 
-	r.Use(httplog.LoggerWithName("CHI API"))
+	logger, err := httplog.LoggerWithName("CHI API")
+	if err != nil {
+		panic(err)
+	}
+	r.Use(logger.Handler)
 	r.Get("/happy", happyHandler)
 	r.Post("/happy", happyHandler)
 	r.Post("/not_found", http.NotFound)
@@ -35,7 +39,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

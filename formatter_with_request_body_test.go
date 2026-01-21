@@ -1,57 +1,22 @@
 package httplog
 
 import (
-	"bytes"
-	"context"
-	"errors"
-	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-type brokenBody int
-
-func (brokenBody) Read(p []byte) (n int, err error) {
-	return 0, errors.New("I am always broken, no worries at all :-)")
-}
-
 func TestRequestBodyLogFormatterBroken(t *testing.T) {
-	timeStamp := time.Unix(1544173902, 0).UTC()
-
-	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", brokenBody(1))
-	brokenBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     false,
-	}
-	assert.Equal(t,
-		"===\n ERROR READING BODY: I am always broken, no worries at all :-) \n===\n",
-		RequestBodyLogFormatter(brokenBodyParams),
-	)
+	// This test is no longer relevant since we don't read from Request.Body
+	// RequestBodyLogFormatter now uses the RequestBody field directly
+	// which is populated by the middleware
+	t.Skip("Not applicable - RequestBodyLogFormatter now uses RequestBody field")
 }
 
 func TestRequestBodyLogFormatterEmpty(t *testing.T) {
-	timeStamp := time.Unix(1544173902, 0).UTC()
-
-	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", nil)
 	emptyBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     false,
+		RequestBody: []byte{},
+		colorMode:   ColorDisable,
 	}
 	assert.Equal(t,
 		"===\n EMPTY BODY \n===\n",
@@ -60,19 +25,9 @@ func TestRequestBodyLogFormatterEmpty(t *testing.T) {
 }
 
 func TestRequestBodyLogFormatterEmptyColor(t *testing.T) {
-	timeStamp := time.Unix(1544173902, 0).UTC()
-
-	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", nil)
 	emptyBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     true,
+		RequestBody: []byte{},
+		colorMode:   ColorForce,
 	}
 	assert.Equal(t,
 		"===\n\x1b[90;43m EMPTY BODY \x1b[0m\n===\n",
@@ -81,19 +36,9 @@ func TestRequestBodyLogFormatterEmptyColor(t *testing.T) {
 }
 
 func TestRequestBodyLogFormatterText(t *testing.T) {
-	timeStamp := time.Unix(1544173902, 0).UTC()
-
-	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", bytes.NewBufferString("I am just a text body!"))
 	textBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     false,
+		RequestBody: []byte("I am just a text body!"),
+		colorMode:   ColorDisable,
 	}
 	assert.Equal(t,
 		"===\n TEXT BODY:\nI am just a text body!\n===\n",
@@ -102,21 +47,11 @@ func TestRequestBodyLogFormatterText(t *testing.T) {
 }
 
 func TestRequestBodyLogFormatterJSON(t *testing.T) {
-	timeStamp := time.Unix(1544173902, 0).UTC()
-
 	jsonbody := `{"name":"John", "age":30, "car":null}`
 
-	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", bytes.NewBufferString(jsonbody))
 	textBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     false,
+		RequestBody: []byte(jsonbody),
+		colorMode:   ColorDisable,
 	}
 	assert.Equal(t,
 		"===\n JSON BODY:\n{\n  \"age\": 30,\n  \"car\": null,\n  \"name\": \"John\"\n}\n===\n",

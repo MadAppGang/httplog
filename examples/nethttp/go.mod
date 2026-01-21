@@ -1,10 +1,10 @@
-module github.com/MadAppGang/httplog/examples/nethttp
+module github.com/MadAppGang/httplog/v2/examples/nethttp
 
-go 1.19
+go 1.21
 
-replace github.com/MadAppGang/httplog => ../..
+replace github.com/MadAppGang/httplog/v2 => ../..
 
-require github.com/MadAppGang/httplog v0.0.0-00010101000000-000000000000
+require github.com/MadAppGang/httplog/v2 v2.0.0
 
 require (
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect

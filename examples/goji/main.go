@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"goji.io"
 	"goji.io/pat"
 )
@@ -18,10 +18,13 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 func main() {
 	// setup routes
 	mux := goji.NewMux()
-	logger := httplog.LoggerWithName("GOJI🫐")
-	mux.Handle(pat.Get("/happy"), logger(happyHandler))
-	mux.Handle(pat.Post("/happy"), logger(happyHandler))
-	mux.Handle(pat.Get("/not_found"), logger(http.NotFoundHandler()))
+	logger, err := httplog.LoggerWithName("GOJI🫐")
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle(pat.Get("/happy"), logger.Handler(happyHandler))
+	mux.Handle(pat.Post("/happy"), logger.Handler(happyHandler))
+	mux.Handle(pat.Get("/not_found"), logger.Handler(http.NotFoundHandler()))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -35,7 +38,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

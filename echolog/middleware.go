@@ -4,44 +4,65 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/labstack/echo/v4"
 )
 
 // Logger returns default logger echo middleware
-func Logger() func(next echo.HandlerFunc) echo.HandlerFunc {
-	return echoLogger(httplog.Logger)
+func Logger() (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithConfig(httplog.LoggerConfig{
+		ProxyHandler: httplog.NewProxy(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 // LoggerWithName instance a Logger middleware with the specified name prefix.
-func LoggerWithName(routerName string) func(next echo.HandlerFunc) echo.HandlerFunc {
-	logger := httplog.LoggerWithName(routerName)
-	return echoLogger(logger)
+func LoggerWithName(routerName string) (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithName(routerName)
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 // LoggerWithFormatter instance a Logger middleware with the specified log format function.
-func LoggerWithFormatter(f httplog.LogFormatter) func(next echo.HandlerFunc) echo.HandlerFunc {
-	logger := httplog.LoggerWithFormatter(f)
-	return echoLogger(logger)
+func LoggerWithFormatter(f httplog.LogFormatter) (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithFormatter(f)
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 // LoggerWithFormatterAndName instance a Logger middleware with the specified log format function.
-func LoggerWithFormatterAndName(routerName string, f httplog.LogFormatter) func(next echo.HandlerFunc) echo.HandlerFunc {
-	logger := httplog.LoggerWithFormatterAndName(routerName, f)
-	return echoLogger(logger)
+func LoggerWithFormatterAndName(routerName string, f httplog.LogFormatter) (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithFormatterAndName(routerName, f)
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 // LoggerWithWriter instance a Logger middleware with the specified writer buffer.
 // Example: os.Stdout, a file opened in write mode, a socket...
-func LoggerWithWriter(out io.Writer, notlogged ...string) func(next echo.HandlerFunc) echo.HandlerFunc {
-	logger := httplog.LoggerWithWriter(out, notlogged...)
-	return echoLogger(logger)
+func LoggerWithWriter(out io.Writer, notlogged ...string) (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithWriter(out, notlogged...)
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 // LoggerWithConfig instance a Logger middleware with config.
-func LoggerWithConfig(conf httplog.LoggerConfig) func(next echo.HandlerFunc) echo.HandlerFunc {
-	logger := httplog.LoggerWithConfig(conf)
-	return echoLogger(logger)
+func LoggerWithConfig(conf httplog.LoggerConfig) (func(next echo.HandlerFunc) echo.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+	return echoLogger(logger.Handler), nil
 }
 
 func echoLogger(logger func(next http.Handler) http.Handler) func(next echo.HandlerFunc) echo.HandlerFunc {

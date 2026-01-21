@@ -1,8 +1,11 @@
 package httplog
 
 import (
+	"bytes"
 	"fmt"
+	"hash/fnv"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
@@ -15,8 +18,21 @@ import (
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
+// LoggingMiddleware wraps the logging middleware with lifecycle methods
+type LoggingMiddleware struct {
+	Handler func(next http.Handler) http.Handler
+	logChan chan LogFormatterParams
+}
+
+// Close cleanly shuts down async logging goroutine
+func (m *LoggingMiddleware) Close() {
+	if m.logChan != nil {
+		close(m.logChan)
+	}
+}
+
 // LoggerWithName instance a Logger middleware with the specified name prefix.
-func LoggerWithName(routerName string) func(next http.Handler) http.Handler {
+func LoggerWithName(routerName string) (*LoggingMiddleware, error) {
 	return LoggerWithConfig(LoggerConfig{
 		ProxyHandler: NewProxy(),
 		RouterName:   routerName,
@@ -24,7 +40,7 @@ func LoggerWithName(routerName string) func(next http.Handler) http.Handler {
 }
 
 // LoggerWithFormatter instance a Logger middleware with the specified log format function.
-func LoggerWithFormatter(f LogFormatter) func(next http.Handler) http.Handler {
+func LoggerWithFormatter(f LogFormatter) (*LoggingMiddleware, error) {
 	return LoggerWithConfig(LoggerConfig{
 		Formatter:    f,
 		ProxyHandler: NewProxy(),
@@ -32,7 +48,7 @@ func LoggerWithFormatter(f LogFormatter) func(next http.Handler) http.Handler {
 }
 
 // LoggerWithFormatterAndName instance a Logger middleware with the specified log format function.
-func LoggerWithFormatterAndName(routerName string, f LogFormatter) func(next http.Handler) http.Handler {
+func LoggerWithFormatterAndName(routerName string, f LogFormatter) (*LoggingMiddleware, error) {
 	return LoggerWithConfig(LoggerConfig{
 		Formatter:    f,
 		ProxyHandler: NewProxy(),
@@ -42,7 +58,7 @@ func LoggerWithFormatterAndName(routerName string, f LogFormatter) func(next htt
 
 // LoggerWithWriter instance a Logger middleware with the specified writer buffer.
 // Example: os.Stdout, a file opened in write mode, a socket...
-func LoggerWithWriter(out io.Writer, notlogged ...string) func(next http.Handler) http.Handler {
+func LoggerWithWriter(out io.Writer, notlogged ...string) (*LoggingMiddleware, error) {
 	return LoggerWithConfig(LoggerConfig{
 		Output:       out,
 		SkipPaths:    notlogged,
@@ -51,7 +67,12 @@ func LoggerWithWriter(out io.Writer, notlogged ...string) func(next http.Handler
 }
 
 // LoggerWithConfig instance a Logger middleware with config.
-func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
+func LoggerWithConfig(conf LoggerConfig) (*LoggingMiddleware, error) {
+	// Validate configuration first
+	if err := ValidateConfig(conf); err != nil {
+		return nil, err
+	}
+
 	formatter := conf.Formatter
 	if formatter == nil {
 		formatter = DefaultLogFormatter
@@ -66,31 +87,54 @@ func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
 		out = DefaultWriter
 	}
 
-	isTerm := true
-
-	if w, ok := out.(*os.File); !ok || os.Getenv("TERM") == "dumb" ||
-		(!isatty.IsTerminal(w.Fd()) && !isatty.IsCygwinTerminal(w.Fd())) {
-		isTerm = false
+	colorMode := conf.ColorMode
+	// Auto-detect terminal if ColorAuto
+	if colorMode == ColorAuto {
+		if w, ok := out.(*os.File); ok && os.Getenv("TERM") != "dumb" &&
+			(isatty.IsTerminal(w.Fd()) || isatty.IsCygwinTerminal(w.Fd())) {
+			colorMode = ColorForce // Resolve to ColorForce when terminal detected
+		} else {
+			// Not a terminal, disable colors
+			colorMode = ColorDisable
+		}
 	}
 
 	var skipPath []*regexp.Regexp
 	for _, p := range conf.SkipPaths {
-		re, err := regexp.Compile(p)
-		if err == nil {
-			skipPath = append(skipPath, re)
-		} else {
-			fmt.Fprint(out, fmt.Sprintf("error parsing skip path regex, ignoring: %s", p))
-		}
+		re, _ := regexp.Compile(p) // Already validated
+		skipPath = append(skipPath, re)
 	}
 
 	var hideHeaderKeys []*regexp.Regexp
 	for _, p := range conf.HideHeaderKeys {
-		re, err := regexp.Compile(p)
-		if err == nil {
-			hideHeaderKeys = append(hideHeaderKeys, re)
-		} else {
-			fmt.Fprint(out, fmt.Sprintf("error parsing header key regexp to hide, ignoring: %s", p))
-		}
+		re, _ := regexp.Compile(p) // Already validated
+		hideHeaderKeys = append(hideHeaderKeys, re)
+	}
+
+	// Set defaults for new config fields
+	sampleRate := conf.SampleRate
+	if sampleRate < 0 {
+		sampleRate = 1.0 // Default to 100% sampling when unset (-1 or negative)
+	}
+
+	minLevel := conf.MinLevel
+	// minLevel defaults to LevelDebug (0), which is fine
+
+	asyncBufferSize := conf.AsyncBufferSize
+	if conf.AsyncLogging && asyncBufferSize == 0 {
+		asyncBufferSize = 1000 // Default buffer size
+	}
+
+	// Create async logging channel if enabled
+	var logChan chan LogFormatterParams
+	if conf.AsyncLogging {
+		logChan = make(chan LogFormatterParams, asyncBufferSize)
+		// Start background goroutine for async logging
+		go func() {
+			for param := range logChan {
+				fmt.Fprint(out, formatter(param))
+			}
+		}()
 	}
 
 	middleware := func(next http.Handler) http.Handler {
@@ -100,9 +144,21 @@ func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
 			path := r.URL.Path
 			raw := r.URL.RawQuery
 
+			// Capture request body if enabled
+			var requestBody []byte
+			if conf.CaptureRequestBody && r.Body != nil {
+				var err error
+				requestBody, err = io.ReadAll(r.Body)
+				if err != nil {
+					// Log error but don't fail - body capture is optional
+					requestBody = []byte(fmt.Sprintf("[body read error: %v]", err))
+				}
+				r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+			}
+
 			// Process request
 			// Wrap response writer with Recorded response writer
-			wr := NewWriter(w, conf.CaptureBody)
+			wr := NewWriter(w, conf.CaptureResponseBody)
 			next.ServeHTTP(wr, r)
 
 			var skip bool
@@ -114,13 +170,33 @@ func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
 				}
 			}
 
+			// Apply sampling (skip if sample rate check fails)
+			if !skip && sampleRate > 0 && sampleRate < 1.0 {
+				if conf.DeterministicSampling {
+					// Hash-based sampling using path + method
+					h := fnv.New32a()
+					h.Write([]byte(r.Method + path))
+					hashVal := float64(h.Sum32()) / float64(^uint32(0))
+					if hashVal > sampleRate {
+						skip = true
+					}
+				} else {
+					if rand.Float64() > sampleRate {
+						skip = true
+					}
+				}
+			}
+
 			// Log only when path is not being skipped
-			if skip == false {
-				r.Header = maskHeaderKeys(r.Header.Clone(), hideHeaderKeys)
+			if !skip {
+				maskedReqHeader := maskHeaderKeys(r.Header.Clone(), hideHeaderKeys)
 
 				param := LogFormatterParams{
-					Request: r,
-					isTerm:  isTerm,
+					Request:       r,
+					Context:       r.Context(),
+					colorMode:     colorMode,
+					RequestHeader: maskedReqHeader,
+					RequestBody:   requestBody,
 				}
 
 				// Stop timer
@@ -131,8 +207,16 @@ func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
 				param.Method = r.Method
 				param.StatusCode = wr.Status()
 
+				// Set level based on status code
+				param.Level = LevelFromStatusCode(param.StatusCode)
+
+				// Apply level filtering
+				if param.Level < minLevel {
+					return
+				}
+
 				param.BodySize = wr.Size()
-				param.Body = wr.Body()
+				param.ResponseBody = wr.Body()
 				param.ResponseHeader = maskHeaderKeys(wr.Header().Clone(), hideHeaderKeys)
 
 				param.RouterName = conf.RouterName
@@ -143,9 +227,23 @@ func LoggerWithConfig(conf LoggerConfig) func(next http.Handler) http.Handler {
 
 				param.Path = path
 
-				fmt.Fprint(out, formatter(param))
+				// Write log (sync or async)
+				if conf.AsyncLogging {
+					select {
+					case logChan <- param:
+						// Successfully queued
+					default:
+						// Buffer full, drop log (or could block here)
+					}
+				} else {
+					fmt.Fprint(out, formatter(param))
+				}
 			}
 		})
 	}
-	return middleware
+
+	return &LoggingMiddleware{
+		Handler: middleware,
+		logChan: logChan,
+	}, nil
 }

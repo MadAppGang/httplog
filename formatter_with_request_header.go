@@ -17,7 +17,7 @@ func RequestHeaderLogFormatter(param LogFormatterParams) string {
 		greenColor = "\033[;32m"
 		resetColor = param.ResetColor()
 	}
-	for key, value := range param.Request.Header {
+	for key, value := range param.RequestHeader {
 		output += fmt.Sprintf("  %s %s %s: %s %s %s\n",
 			blueColor, key, resetColor,
 			greenColor, value, resetColor,

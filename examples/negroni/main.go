@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/urfave/negroni"
 )
 
@@ -16,8 +16,11 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 
 // use function Curry pattern
 var negroniLoggerMiddleware negroni.Handler = negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-	logger := httplog.LoggerWithName("negroni") // setup your router here
-	logger(next).ServeHTTP(rw, r)
+	logger, err := httplog.LoggerWithName("negroni") // setup your router here
+	if err != nil {
+		panic(err)
+	}
+	logger.Handler(next).ServeHTTP(rw, r)
 })
 
 func main() {

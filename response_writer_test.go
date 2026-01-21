@@ -59,7 +59,7 @@ func TestResponseWriterWritingString(t *testing.T) {
 	rec := httptest.NewRecorder()
 	rw := NewResponseWriter(rec)
 
-	rw.Write([]byte("Hello world"))
+	_, _ = rw.Write([]byte("Hello world"))
 
 	assert.Equal(t, rec.Code, rw.Status())
 	assert.Equal(t, rec.Body.String(), "Hello world")
@@ -73,7 +73,7 @@ func TestResponseWriterWritingStringShadowBody(t *testing.T) {
 	rw := NewResponseWriterWithBody(rec)
 
 	data := []byte("Hello world")
-	rw.Write(data)
+	_, _ = rw.Write(data)
 
 	assert.Equal(t, rec.Code, rw.Status())
 	assert.Equal(t, rec.Body.String(), "Hello world")
@@ -87,8 +87,8 @@ func TestResponseWriterWritingStrings(t *testing.T) {
 	rec := httptest.NewRecorder()
 	rw := NewResponseWriter(rec)
 
-	rw.Write([]byte("Hello world"))
-	rw.Write([]byte("foo bar bat baz"))
+	_, _ = rw.Write([]byte("Hello world"))
+	_, _ = rw.Write([]byte("foo bar bat baz"))
 
 	assert.Equal(t, rec.Code, rw.Status())
 	assert.Equal(t, rec.Body.String(), "Hello worldfoo bar bat baz")
@@ -222,7 +222,7 @@ func (rw *mockResponseWriterWithReadFrom) ReadFrom(r io.Reader) (n int64, err er
 		return 0, err
 	}
 	rw.writtenStr = string(bytes)
-	rw.ResponseRecorder.Write(bytes)
+	_, _ = rw.ResponseRecorder.Write(bytes)
 	return int64(len(bytes)), nil
 }
 

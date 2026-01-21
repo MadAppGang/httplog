@@ -8,12 +8,13 @@ import (
 
 func TestResponseBodyLogFormatterEmpty(t *testing.T) {
 	bodyParams := LogFormatterParams{
-		RouterName: "TEST",
-		StatusCode: 200,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Body:       []byte(""),
-		Path:       "/",
+		RouterName:   "TEST",
+		StatusCode:   200,
+		ClientIP:     "20.20.20.20",
+		Method:       "GET",
+		ResponseBody: []byte(""),
+		Path:         "/",
+		colorMode:    ColorDisable,
 	}
 
 	assert.Equal(t,
@@ -24,12 +25,13 @@ func TestResponseBodyLogFormatterEmpty(t *testing.T) {
 
 func TestResponseBodyLogFormatterText(t *testing.T) {
 	bodyParams := LogFormatterParams{
-		RouterName: "TEST",
-		StatusCode: 200,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Body:       []byte("I am text body!"),
-		Path:       "/",
+		RouterName:   "TEST",
+		StatusCode:   200,
+		ClientIP:     "20.20.20.20",
+		Method:       "GET",
+		ResponseBody: []byte("I am text body!"),
+		Path:         "/",
+		colorMode:    ColorDisable,
 	}
 
 	assert.Equal(t,
@@ -40,13 +42,13 @@ func TestResponseBodyLogFormatterText(t *testing.T) {
 
 func TestResponseBodyLogFormatterTextColor(t *testing.T) {
 	bodyParams := LogFormatterParams{
-		RouterName: "TEST",
-		StatusCode: 200,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Body:       []byte("I am text body!"),
-		Path:       "/",
-		isTerm:     true,
+		RouterName:   "TEST",
+		StatusCode:   200,
+		ClientIP:     "20.20.20.20",
+		Method:       "GET",
+		ResponseBody: []byte("I am text body!"),
+		Path:         "/",
+		colorMode:    ColorForce,
 	}
 
 	assert.Equal(t,
@@ -57,12 +59,13 @@ func TestResponseBodyLogFormatterTextColor(t *testing.T) {
 
 func TestResponseBodyLogFormatterJSON(t *testing.T) {
 	bodyParams := LogFormatterParams{
-		RouterName: "TEST",
-		StatusCode: 200,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Body:       []byte(`{"name":"John", "age":30, "car":null}`),
-		Path:       "/",
+		RouterName:   "TEST",
+		StatusCode:   200,
+		ClientIP:     "20.20.20.20",
+		Method:       "GET",
+		ResponseBody: []byte(`{"name":"John", "age":30, "car":null}`),
+		Path:         "/",
+		colorMode:    ColorDisable,
 	}
 
 	assert.Equal(t,

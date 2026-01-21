@@ -15,6 +15,7 @@ func TestResponseHeaderLogFormatter(t *testing.T) {
 	rec.Header().Set("Token", "Bearer ABCDEFG")
 	textBodyParams := LogFormatterParams{
 		ResponseHeader: rec.Header(),
+		colorMode:      ColorDisable,
 	}
 	result := ResponseHeaderLogFormatter(textBodyParams)
 	assert.Contains(t, result, "X-Forwarded-For :  [  20.20.20.20, 30.30.30.30] ")
@@ -31,7 +32,7 @@ func TestResponseHeaderLogFormatterColor(t *testing.T) {
 	rec.Header().Set("Token", "Bearer ABCDEFG")
 	textBodyParams := LogFormatterParams{
 		ResponseHeader: rec.Header(),
-		isTerm:         true,
+		colorMode:      ColorForce,
 	}
 	result := ResponseHeaderLogFormatter(textBodyParams)
 	assert.Contains(t, result, "  \x1b[1;34m X-Real-Ip \x1b[0m: \x1b[;32m [ 10.10.10.10  ] \x1b[0m")

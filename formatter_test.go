@@ -18,7 +18,7 @@ func TestDefaultLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     false,
+		colorMode:  ColorDisable,
 	}
 
 	termTrueParam := LogFormatterParams{
@@ -29,7 +29,7 @@ func TestDefaultLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     true,
+		colorMode:  ColorForce,
 	}
 	termTrueLongDurationParam := LogFormatterParams{
 		RouterName: "TEST",
@@ -39,7 +39,7 @@ func TestDefaultLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     true,
+		colorMode:  ColorForce,
 	}
 
 	termFalseLongDurationParam := LogFormatterParams{
@@ -50,7 +50,7 @@ func TestDefaultLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     false,
+		colorMode:  ColorDisable,
 	}
 
 	assert.Equal(t, "[TEST] 2018/12/07 - 09:11:42 | 200 |            5s |     20.20.20.20 | GET      \"/\"\n", DefaultLogFormatter(termFalseParam))

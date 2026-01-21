@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 )
 
 var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -16,18 +16,24 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 func main() {
 	// setup routes
 	// Default log formatter
-	defaultLogger := httplog.LoggerWithName("Default logger")
-	http.Handle("/happy", defaultLogger(happyHandler))
+	defaultLogger, err := httplog.LoggerWithName("Default logger")
+	if err != nil {
+		panic(err)
+	}
+	http.Handle("/happy", defaultLogger.Handler(happyHandler))
 
 	// Short log formatter
-	shortLogged := httplog.LoggerWithFormatterAndName(
+	shortLogged, err := httplog.LoggerWithFormatterAndName(
 		"Short logger",
 		httplog.ShortLogFormatter, // log formatter implemented in httplog lib
 	)
-	http.Handle("/happy_short", shortLogged(happyHandler))
+	if err != nil {
+		panic(err)
+	}
+	http.Handle("/happy_short", shortLogged.Handler(happyHandler))
 
 	// Custom log formatter
-	customLogger := httplog.LoggerWithFormatter(func(param httplog.LogFormatterParams) string {
+	customLogger, err := httplog.LoggerWithFormatter(func(param httplog.LogFormatterParams) string {
 		// formatter is a function, you can define your own
 		statusColor := param.StatusCodeColor()
 		resetColor := param.ResetColor()
@@ -39,7 +45,10 @@ func main() {
 			boldRedText, param.Path, resetColor,
 		)
 	})
-	http.Handle("/happy_custom", customLogger(happyHandler))
+	if err != nil {
+		panic(err)
+	}
+	http.Handle("/happy_custom", customLogger.Handler(happyHandler))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -53,7 +62,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

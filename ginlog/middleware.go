@@ -4,44 +4,65 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/gin-gonic/gin"
 )
 
 // Logger returns default logger echo middleware
-func Logger() gin.HandlerFunc {
-	return ginLogger(httplog.Logger)
+func Logger() (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithConfig(httplog.LoggerConfig{
+		ProxyHandler: httplog.NewProxy(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // LoggerWithName instance a Logger middleware with the specified name prefix.
-func LoggerWithName(routerName string) gin.HandlerFunc {
-	logger := httplog.LoggerWithName(routerName)
-	return ginLogger(logger)
+func LoggerWithName(routerName string) (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithName(routerName)
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // LoggerWithFormatter instance a Logger middleware with the specified log format function.
-func LoggerWithFormatter(f httplog.LogFormatter) gin.HandlerFunc {
-	logger := httplog.LoggerWithFormatter(f)
-	return ginLogger(logger)
+func LoggerWithFormatter(f httplog.LogFormatter) (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithFormatter(f)
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // LoggerWithFormatterAndName instance a Logger middleware with the specified log format function.
-func LoggerWithFormatterAndName(routerName string, f httplog.LogFormatter) gin.HandlerFunc {
-	logger := httplog.LoggerWithFormatterAndName(routerName, f)
-	return ginLogger(logger)
+func LoggerWithFormatterAndName(routerName string, f httplog.LogFormatter) (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithFormatterAndName(routerName, f)
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // LoggerWithWriter instance a Logger middleware with the specified writer buffer.
 // Example: os.Stdout, a file opened in write mode, a socket...
-func LoggerWithWriter(out io.Writer, notlogged ...string) gin.HandlerFunc {
-	logger := httplog.LoggerWithWriter(out, notlogged...)
-	return ginLogger(logger)
+func LoggerWithWriter(out io.Writer, notlogged ...string) (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithWriter(out, notlogged...)
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // LoggerWithConfig instance a Logger middleware with config.
-func LoggerWithConfig(conf httplog.LoggerConfig) gin.HandlerFunc {
-	logger := httplog.LoggerWithConfig(conf)
-	return ginLogger(logger)
+func LoggerWithConfig(conf httplog.LoggerConfig) (gin.HandlerFunc, error) {
+	logger, err := httplog.LoggerWithConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+	return ginLogger(logger.Handler), nil
 }
 
 // embed canonical logger to gin middleware format.

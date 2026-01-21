@@ -1,11 +1,13 @@
-module github.com/MadAppGang/httplog/ginlog
+module github.com/MadAppGang/httplog/v2/ginlog
 
-go 1.20
+go 1.21
 
 require (
-	github.com/MadAppGang/httplog v1.3.0
+	github.com/MadAppGang/httplog/v2 v2.0.0
 	github.com/gin-gonic/gin v1.9.0
 )
+
+replace github.com/MadAppGang/httplog/v2 => ../
 
 require (
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect

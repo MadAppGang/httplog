@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog/echolog"
+	"github.com/MadAppGang/httplog/v2/echolog"
 	"github.com/labstack/echo/v4"
 )
 
@@ -20,7 +20,11 @@ func main() {
 	e := echo.New()
 
 	// Middleware
-	e.Use(echolog.LoggerWithName("ECHO NATIVE"))
+	logger, err := echolog.LoggerWithName("ECHO NATIVE")
+	if err != nil {
+		panic(err)
+	}
+	e.Use(logger)
 	e.GET("/happy", happyHandler)
 	e.POST("/happy", happyHandler)
 	e.GET("/not_found", echo.NotFoundHandler)
@@ -37,7 +41,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

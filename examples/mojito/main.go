@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/go-mojito/mojito"
 )
 
@@ -14,8 +14,17 @@ func happyHandler(ctx mojito.Context) error {
 }
 
 func main() {
-	mojito.WithNotFoundHandler(httplog.Logger(http.NotFoundHandler()))
-	mojito.WithMiddleware(httplog.LoggerWithName("🍸🍸🍸🍸"))
+	notFoundHandler, err := httplog.Logger(http.NotFoundHandler())
+	if err != nil {
+		panic(err)
+	}
+	mojito.WithNotFoundHandler(notFoundHandler)
+
+	logger, err := httplog.LoggerWithName("🍸🍸🍸🍸")
+	if err != nil {
+		panic(err)
+	}
+	mojito.WithMiddleware(logger)
 	mojito.POST("/happy", happyHandler)
 	mojito.GET("/happy", happyHandler)
 
@@ -28,7 +37,7 @@ func main() {
 	}()
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

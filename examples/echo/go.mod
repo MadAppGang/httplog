@@ -1,18 +1,18 @@
-module github.com/MadAppGang/httplog/examples/echo
+module github.com/MadAppGang/httplog/v2/examples/echo
 
-go 1.19
+go 1.21
 
-replace github.com/MadAppGang/httplog => ../..
+replace github.com/MadAppGang/httplog/v2 => ../..
 
-replace github.com/MadAppGang/httplog/echolog => ../../echolog
+replace github.com/MadAppGang/httplog/v2/echolog => ../../echolog
 
 require (
-	github.com/MadAppGang/httplog/echolog v0.0.0-00010101000000-000000000000
+	github.com/MadAppGang/httplog/v2/echolog v0.0.0-00010101000000-000000000000
 	github.com/labstack/echo/v4 v4.10.2
 )
 
 require (
-	github.com/MadAppGang/httplog v1.3.0 // indirect
+	github.com/MadAppGang/httplog/v2 v2.0.0 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect

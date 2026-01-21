@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/stretchr/testify/assert"
 )
 

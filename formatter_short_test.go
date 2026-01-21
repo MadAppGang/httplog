@@ -18,7 +18,7 @@ func TestShortLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     false,
+		colorMode:  ColorDisable,
 	}
 
 	termTrueLongDurationParam := LogFormatterParams{
@@ -29,7 +29,7 @@ func TestShortLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     true,
+		colorMode:  ColorForce,
 	}
 
 	assert.Equal(t, "[TEST]  200 | \"/\"\n", ShortLogFormatter(termFalseParam))

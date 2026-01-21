@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
-	lzap "github.com/MadAppGang/httplog/zap"
+	"github.com/MadAppGang/httplog/v2"
+	lzap "github.com/MadAppGang/httplog/v2/zap"
 	"go.uber.org/zap"
 )
 
@@ -29,12 +29,15 @@ func main() {
 	z, _ := zap.NewDevelopment()
 	defer z.Sync() // flushes buffer, if any
 
-	logger := httplog.LoggerWithConfig(httplog.LoggerConfig{
+	logger, err := httplog.LoggerWithConfig(httplog.LoggerConfig{
 		RouterName: "FillBodyFormatter",
 		Formatter:  lzap.DefaultZapLogger(z, zap.InfoLevel, ""),
 	})
+	if err != nil {
+		panic(err)
+	}
 
-	http.Handle("/happy", logger(http.HandlerFunc(happyHandler)))
+	http.Handle("/happy", logger.Handler(http.HandlerFunc(happyHandler)))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -49,7 +52,7 @@ func main() {
 
 	// let's make couple of request
 	// empty body
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

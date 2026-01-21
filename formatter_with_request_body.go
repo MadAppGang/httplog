@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 
 	"github.com/TylerBrock/colorjson"
 )
@@ -14,37 +13,25 @@ import (
 // license that can be found in the LICENSE file.
 
 // RequestBodyLogFormatter format function with JSON body output or text
+// Note: Requires CaptureRequestBody to be enabled in LoggerConfig
 func RequestBodyLogFormatter(param LogFormatterParams) string {
-	var blueColor, yellowColor, greenColor, redColor, resetColor string
+	var blueColor, yellowColor, greenColor, resetColor string
 	if param.IsOutputColor() {
 		blueColor = blue
 		yellowColor = yellow
 		greenColor = green
-		redColor = red
 		resetColor = param.ResetColor()
 	}
 
-	var body []byte
-	if param.Request.Body != nil {
-		// get request body
-		var err error
-		body, err = ioutil.ReadAll(param.Request.Body)
-		if err != nil {
-			return fmt.Sprintf("===\n%s ERROR READING BODY: %s %s\n===\n", redColor, err.Error(), resetColor)
-		}
-		// let's bring back the request body to the next listener
-		param.Request.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-	}
-
-	if len(body) == 0 {
+	if len(param.RequestBody) == 0 {
 		return fmt.Sprintf("===\n%s EMPTY BODY %s\n===\n", yellowColor, resetColor)
 	}
 
 	var bodyJSON map[string]interface{}
-	err := json.Unmarshal(body, &bodyJSON)
+	err := json.Unmarshal(param.RequestBody, &bodyJSON)
 	if err != nil {
 		// it is not a json
-		text := bytes.ToValidUTF8(body, nil)
+		text := bytes.ToValidUTF8(param.RequestBody, nil)
 		return fmt.Sprintf("===\n%s TEXT BODY:%s\n%s\n===\n", blueColor, resetColor, string(text))
 	}
 

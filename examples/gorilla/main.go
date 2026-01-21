@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/gorilla/mux"
 )
 
@@ -19,7 +19,12 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/happy", happyHandler)
 	r.HandleFunc("/not_found", http.NotFound)
-	r.Use(httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithResponseHeader))
+
+	logger, err := httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithResponseHeader)
+	if err != nil {
+		panic(err)
+	}
+	r.Use(logger.Handler)
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -33,7 +38,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

@@ -23,15 +23,16 @@ func TestRequestHeaderLogFormatter(t *testing.T) {
 	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", bytes.NewBufferString("I am just a text body!"))
 	setHeader(request)
 	textBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     false,
+		Request:       request,
+		RequestHeader: request.Header.Clone(),
+		RouterName:    "TEST",
+		TimeStamp:     timeStamp,
+		StatusCode:    200,
+		Latency:       time.Second * 5,
+		ClientIP:      "20.20.20.20",
+		Method:        "GET",
+		Path:          "/",
+		colorMode:     ColorDisable,
 	}
 	result := RequestHeaderLogFormatter(textBodyParams)
 	assert.Contains(t, result, "X-Forwarded-For :  [  20.20.20.20, 30.30.30.30] ")
@@ -45,15 +46,16 @@ func TestRequestHeaderLogFormatterColor(t *testing.T) {
 	request, _ := http.NewRequestWithContext(context.Background(), "POST", "/", bytes.NewBufferString("I am just a text body!"))
 	setHeader(request)
 	textBodyParams := LogFormatterParams{
-		Request:    request,
-		RouterName: "TEST",
-		TimeStamp:  timeStamp,
-		StatusCode: 200,
-		Latency:    time.Second * 5,
-		ClientIP:   "20.20.20.20",
-		Method:     "GET",
-		Path:       "/",
-		isTerm:     true,
+		Request:       request,
+		RequestHeader: request.Header.Clone(),
+		RouterName:    "TEST",
+		TimeStamp:     timeStamp,
+		StatusCode:    200,
+		Latency:       time.Second * 5,
+		ClientIP:      "20.20.20.20",
+		Method:        "GET",
+		Path:          "/",
+		colorMode:     ColorForce,
 	}
 
 	result := RequestHeaderLogFormatter(textBodyParams)

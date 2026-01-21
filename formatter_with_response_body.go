@@ -22,15 +22,15 @@ func ResponseBodyLogFormatter(param LogFormatterParams) string {
 		resetColor = param.ResetColor()
 	}
 
-	if len(param.Body) == 0 {
+	if len(param.ResponseBody) == 0 {
 		return fmt.Sprintf("===\n%s EMPTY BODY %s\n===\n", yellowColor, resetColor)
 	}
 
 	var body map[string]interface{}
-	err := json.Unmarshal(param.Body, &body)
+	err := json.Unmarshal(param.ResponseBody, &body)
 	if err != nil {
 		// it is not a json
-		text := bytes.ToValidUTF8(param.Body, nil)
+		text := bytes.ToValidUTF8(param.ResponseBody, nil)
 		return fmt.Sprintf("===\n%s TEXT BODY:%s\n%s\n===\n", blueColor, resetColor, string(text))
 	}
 

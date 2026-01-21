@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 )
 
 const jsonBody = `{"str": "foo","num": 100,"bool": false,"null": null,"array": ["foo", "bar", "baz"],"obj": { "a": 1, "b": 2 }}`
@@ -23,15 +23,18 @@ func emptyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	logger := httplog.LoggerWithConfig(httplog.LoggerConfig{
-		RouterName:  "FillBodyFormatter",
-		Formatter:   httplog.DefaultLogFormatterWithResponseHeadersAndBody,
-		CaptureBody: true,
+	logger, err := httplog.LoggerWithConfig(httplog.LoggerConfig{
+		RouterName:          "FillBodyFormatter",
+		Formatter:           httplog.DefaultLogFormatterWithResponseHeadersAndBody,
+		CaptureResponseBody: true,
 	})
+	if err != nil {
+		panic(err)
+	}
 	// setup routes
-	http.Handle("/empty", logger(http.HandlerFunc(emptyHandler)))
-	http.Handle("/wrong", logger(http.HandlerFunc(notJSONHandler)))
-	http.Handle("/happy", logger(http.HandlerFunc(happyHandler)))
+	http.Handle("/empty", logger.Handler(http.HandlerFunc(emptyHandler)))
+	http.Handle("/wrong", logger.Handler(http.HandlerFunc(notJSONHandler)))
+	http.Handle("/happy", logger.Handler(http.HandlerFunc(happyHandler)))
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -46,7 +49,7 @@ func main() {
 
 	// let's make couple of request
 	// empty body
-	_, err := http.Get("http://localhost:3333/wrong")
+	_, err = http.Get("http://localhost:3333/wrong")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

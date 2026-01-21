@@ -5,18 +5,12 @@ package httplog
 // license that can be found in the LICENSE file.
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
 	"time"
-)
-
-type consoleColorModeValue int
-
-const (
-	autoColor consoleColorModeValue = iota
-	disableColor
-	forceColor
 )
 
 const (
@@ -30,10 +24,71 @@ const (
 	reset   = "\033[0m"
 )
 
-var consoleColorMode = autoColor
+// ColorMode controls color output behavior
+type ColorMode int
+
+const (
+	// ColorAuto detects if output is a terminal
+	ColorAuto ColorMode = iota
+
+	// ColorDisable forces colors off
+	ColorDisable
+
+	// ColorForce forces colors on (even for non-terminals)
+	ColorForce
+)
+
+// Level represents log severity level
+type Level int
+
+const (
+	// LevelDebug is for debug-level logs (not used by default)
+	LevelDebug Level = iota
+
+	// LevelInfo is for informational logs (2xx, 3xx responses)
+	LevelInfo
+
+	// LevelWarn is for warning logs (4xx responses)
+	LevelWarn
+
+	// LevelError is for error logs (5xx responses)
+	LevelError
+)
+
+// LevelFromStatusCode determines log level from HTTP status code
+func LevelFromStatusCode(status int) Level {
+	switch {
+	case status >= 500:
+		return LevelError
+	case status >= 400:
+		return LevelWarn
+	default:
+		return LevelInfo
+	}
+}
+
+// String returns the string representation of the level
+func (l Level) String() string {
+	switch l {
+	case LevelDebug:
+		return "DEBUG"
+	case LevelInfo:
+		return "INFO"
+	case LevelWarn:
+		return "WARN"
+	case LevelError:
+		return "ERROR"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 // LoggerConfig defines the config for Logger middleware.
 type LoggerConfig struct {
+	// ColorMode controls color output behavior
+	// Default: ColorAuto (detect terminal)
+	ColorMode ColorMode
+
 	// Optional. Default value is httplog.DefaultLogFormatter
 	Formatter LogFormatter
 
@@ -60,8 +115,48 @@ type LoggerConfig struct {
 	// If you have more than one router it is useful to get one's name in a console output.
 	RouterName string
 
-	// CaptureBody saves response body copy for debug  purposes
-	CaptureBody bool
+	// CaptureResponseBody saves response body copy for debug purposes
+	// WARNING: Increases memory usage, use for debugging only
+	// Default: false
+	CaptureResponseBody bool
+
+	// CaptureRequestBody enables request body capture
+	// Captured in middleware (not formatter) to prevent mutation
+	// WARNING: Increases memory usage, use for debugging only
+	// Default: false
+	CaptureRequestBody bool
+
+	// SampleRate controls what percentage of requests to log
+	// Range: 0.0 (0% - log nothing) to 1.0 (100% - log all)
+	// Use -1 or leave unset to use default (100%)
+	// Example: 0.01 = 1%, 0.1 = 10%
+	// Default: -1 (100% - log all requests)
+	SampleRate float64
+
+	// DeterministicSampling uses hash-based sampling instead of random
+	// When true, same request path/method will consistently be sampled or not
+	// Useful for reproducible behavior and debugging
+	// Default: false (random sampling)
+	DeterministicSampling bool
+
+	// AsyncLogging enables asynchronous log writing
+	// Reduces request latency, but may lose logs on crash
+	// Default: false (synchronous)
+	AsyncLogging bool
+
+	// AsyncBufferSize is the channel buffer size for async logging
+	// Only used if AsyncLogging is true
+	// Default: 1000
+	AsyncBufferSize int
+
+	// MinLevel is the minimum log level to output
+	// Requests below this level are not logged
+	// Level determined by status code:
+	//   - 2xx, 3xx: Info
+	//   - 4xx: Warn
+	//   - 5xx: Error
+	// Default: LevelInfo
+	MinLevel Level
 }
 
 // LogFormatter gives the signature of the formatter function passed to LoggerWithFormatter
@@ -69,9 +164,42 @@ type LoggerConfig struct {
 // or you can create your custom
 type LogFormatter func(params LogFormatterParams) string
 
+// ValidateConfig validates LoggerConfig before middleware creation
+// Returns detailed error if invalid, nil if valid
+func ValidateConfig(conf LoggerConfig) error {
+	// Validate SkipPaths regexes
+	for i, pattern := range conf.SkipPaths {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return fmt.Errorf("invalid SkipPaths[%d] regex pattern '%s': %w", i, pattern, err)
+		}
+	}
+
+	// Validate HideHeaderKeys regexes
+	for i, pattern := range conf.HideHeaderKeys {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return fmt.Errorf("invalid HideHeaderKeys[%d] regex pattern '%s': %w", i, pattern, err)
+		}
+	}
+
+	// Validate SampleRate
+	if conf.SampleRate != -1 && (conf.SampleRate < 0.0 || conf.SampleRate > 1.0) {
+		return fmt.Errorf("invalid SampleRate: %f (must be -1 for default, or between 0.0 and 1.0)", conf.SampleRate)
+	}
+
+	// Validate AsyncBufferSize - only reject negative values
+	if conf.AsyncBufferSize < 0 {
+		return fmt.Errorf("invalid AsyncBufferSize: %d (cannot be negative)", conf.AsyncBufferSize)
+	}
+
+	return nil
+}
+
 // LogFormatterParams is the structure any formatter will be handed when time to log comes
 type LogFormatterParams struct {
 	Request *http.Request
+
+	// Context from http.Request for trace ID extraction, etc.
+	Context context.Context
 
 	// Router prints router name in the log.
 	// If you have more than one router it is useful to get one's name in a console output.
@@ -88,14 +216,20 @@ type LogFormatterParams struct {
 	Method string
 	// Path is a path the client requests.
 	Path string
-	// isTerm shows whether output descriptor refers to a terminal.
-	isTerm bool
+	// colorMode is the color mode for this logger (private)
+	colorMode ColorMode
 	// BodySize is the size of the Response Body
 	BodySize int
-	// Body is a body content, if body is copied
-	Body []byte
+	// ResponseBody is the response body content (if captured)
+	ResponseBody []byte
+	// RequestBody is the request body content (if captured)
+	RequestBody []byte
 	// Response header
 	ResponseHeader http.Header
+	// RequestHeader are the request headers (masked if configured)
+	RequestHeader http.Header
+	// Level is the log level for this request
+	Level Level
 }
 
 // StatusCodeColor is the ANSI color for appropriately logging http status code to a terminal.
@@ -145,29 +279,19 @@ func (p *LogFormatterParams) ResetColor() string {
 
 // IsOutputColor indicates whether can colors be outputted to the log.
 func (p *LogFormatterParams) IsOutputColor() bool {
-	return consoleColorMode == forceColor || (consoleColorMode == autoColor && p.isTerm)
-}
-
-// DisableConsoleColor disables color output in the console.
-func DisableConsoleColor() {
-	consoleColorMode = disableColor
-}
-
-// ForceConsoleColor force color output in the console.
-func ForceConsoleColor() {
-	consoleColorMode = forceColor
+	return p.colorMode == ColorForce
 }
 
 // Logger instances a Logger middleware that will write the logs to console.
 // By default, gin.DefaultWriter = os.Stdout.
-func Logger(next http.Handler) http.Handler {
+func Logger(next http.Handler) (http.Handler, error) {
 	return HandlerWithConfig(LoggerConfig{
 		ProxyHandler: NewProxy(),
 	}, next)
 }
 
 // HandlerWithName instance a Logger handler with the specified prefix name and next handler.
-func HandlerWithName(routerName string, next http.Handler) http.Handler {
+func HandlerWithName(routerName string, next http.Handler) (http.Handler, error) {
 	return HandlerWithConfig(LoggerConfig{
 		ProxyHandler: NewProxy(),
 		RouterName:   routerName,
@@ -175,7 +299,7 @@ func HandlerWithName(routerName string, next http.Handler) http.Handler {
 }
 
 // HandlerWithFormatter instance a Logger handler with the specified log format function and next handler.
-func HandlerWithFormatter(f LogFormatter, next http.Handler) http.Handler {
+func HandlerWithFormatter(f LogFormatter, next http.Handler) (http.Handler, error) {
 	return HandlerWithConfig(LoggerConfig{
 		Formatter:    f,
 		ProxyHandler: NewProxy(),
@@ -183,7 +307,7 @@ func HandlerWithFormatter(f LogFormatter, next http.Handler) http.Handler {
 }
 
 // HandlerWithFormatterAndName instance a Logger handler with the specified log format function and next handler.
-func HandlerWithFormatterAndName(routerName string, f LogFormatter, next http.Handler) http.Handler {
+func HandlerWithFormatterAndName(routerName string, f LogFormatter, next http.Handler) (http.Handler, error) {
 	return HandlerWithConfig(LoggerConfig{
 		Formatter:    f,
 		ProxyHandler: NewProxy(),
@@ -193,7 +317,7 @@ func HandlerWithFormatterAndName(routerName string, f LogFormatter, next http.Ha
 
 // HandlerWithWriter instance a Logger handler with the specified writer buffer and next handler.
 // Example: os.Stdout, a file opened in write mode, a socket...
-func HandlerWithWriter(out io.Writer, next http.Handler, notlogged ...string) http.Handler {
+func HandlerWithWriter(out io.Writer, next http.Handler, notlogged ...string) (http.Handler, error) {
 	return HandlerWithConfig(LoggerConfig{
 		Output:       out,
 		SkipPaths:    notlogged,
@@ -202,8 +326,12 @@ func HandlerWithWriter(out io.Writer, next http.Handler, notlogged ...string) ht
 }
 
 // HandlerWithConfig instance a Logger handler with config and next handler.
-func HandlerWithConfig(conf LoggerConfig, next http.Handler) http.Handler {
-	return LoggerWithConfig(conf)(next)
+func HandlerWithConfig(conf LoggerConfig, next http.Handler) (http.Handler, error) {
+	loggingMiddleware, err := LoggerWithConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+	return loggingMiddleware.Handler(next), nil
 }
 
 func maskHeaderKeys(h http.Header, keys []*regexp.Regexp) http.Header {

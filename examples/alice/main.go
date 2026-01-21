@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/justinas/alice"
 	"github.com/justinas/nosurf"
 )
@@ -23,7 +23,11 @@ func main() {
 	mux := http.NewServeMux()
 
 	// create reusable middleware chain
-	chain := alice.New(httplog.LoggerWithName("ALICE"), nosurf.NewPure)
+	logger, err := httplog.LoggerWithName("ALICE")
+	if err != nil {
+		panic(err)
+	}
+	chain := alice.New(logger.Handler, nosurf.NewPure)
 
 	mux.Handle("/happy", chain.Then(happyHandler()))
 	mux.Handle("/not_found", chain.Then(http.NotFoundHandler()))
@@ -40,7 +44,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

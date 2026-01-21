@@ -41,7 +41,7 @@ func PerformRequestWithRequest(h http.Handler, r *http.Request) *httptest.Respon
 func testHandler200(returnString string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(returnString))
+		_, _ = w.Write([]byte(returnString))
 	})
 }
 
@@ -62,7 +62,7 @@ func testHandlerHeaders(returnString string) http.Handler {
 func TestLogger(t *testing.T) {
 	buffer := new(bytes.Buffer)
 
-	logger := HandlerWithWriter(buffer, testHandler200("Hello world!"))
+	logger, _ := HandlerWithWriter(buffer, testHandler200("Hello world!"))
 
 	PerformRequest(logger, "GET", "/example?a=100")
 	assert.Contains(t, buffer.String(), "200")
@@ -111,7 +111,7 @@ func TestLogger(t *testing.T) {
 
 	buffer.Reset()
 
-	logger = HandlerWithWriter(buffer, http.NotFoundHandler())
+	logger, _ = HandlerWithWriter(buffer, http.NotFoundHandler())
 	PerformRequest(logger, "GET", "/notfound")
 	assert.Contains(t, buffer.String(), "404")
 	assert.Contains(t, buffer.String(), "GET")
@@ -124,7 +124,7 @@ func TestLoggerWithConfig(t *testing.T) {
 	loggerConfig := LoggerConfig{
 		Output: buffer,
 	}
-	logger := HandlerWithConfig(loggerConfig, testHandler200("Hello world!"))
+	logger, _ := HandlerWithConfig(loggerConfig, testHandler200("Hello world!"))
 	PerformRequest(logger, "GET", "/example?a=100")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "GET")
@@ -168,7 +168,7 @@ func TestLoggerWithConfig(t *testing.T) {
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	logger = HandlerWithWriter(buffer, http.NotFoundHandler())
+	logger, _ = HandlerWithWriter(buffer, http.NotFoundHandler())
 	PerformRequest(logger, "GET", "/notfound")
 	assert.Contains(t, buffer.String(), "404")
 	assert.Contains(t, buffer.String(), "GET")
@@ -184,7 +184,7 @@ func TestLoggerWithFormatter(t *testing.T) {
 		DefaultWriter = d
 	}()
 
-	logger := HandlerWithFormatter(func(param LogFormatterParams) string {
+	logger, _ := HandlerWithFormatter(func(param LogFormatterParams) string {
 		return fmt.Sprintf("[%s] %v | %3d | %13v | %15s | %-7s %#v\n",
 			"TEST",
 			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
@@ -209,7 +209,7 @@ func TestLoggerWithConfigFormatting(t *testing.T) {
 	var gotParam LogFormatterParams
 	buffer := new(bytes.Buffer)
 
-	logger := HandlerWithConfig(LoggerConfig{
+	logger, _ := HandlerWithConfig(LoggerConfig{
 		Output:     buffer,
 		RouterName: "TEST ROUTER",
 		Formatter: func(param LogFormatterParams) string {
@@ -286,41 +286,29 @@ func TestResetColor(t *testing.T) {
 }
 
 func TestIsOutputColor(t *testing.T) {
-	// test with isTerm flag true.
+	// test with ColorForce
 	p := LogFormatterParams{
-		isTerm: true,
+		colorMode: ColorForce,
 	}
-
-	consoleColorMode = autoColor
 	assert.Equal(t, true, p.IsOutputColor())
 
-	ForceConsoleColor()
-	assert.Equal(t, true, p.IsOutputColor())
-
-	DisableConsoleColor()
-	assert.Equal(t, false, p.IsOutputColor())
-
-	// test with isTerm flag false.
+	// test with ColorAuto (should not appear in params - resolved at middleware level)
+	// ColorAuto is resolved to ColorForce or ColorDisable in middleware
 	p = LogFormatterParams{
-		isTerm: false,
+		colorMode: ColorAuto,
 	}
-
-	consoleColorMode = autoColor
 	assert.Equal(t, false, p.IsOutputColor())
 
-	ForceConsoleColor()
-	assert.Equal(t, true, p.IsOutputColor())
-
-	DisableConsoleColor()
+	// test with ColorDisable
+	p = LogFormatterParams{
+		colorMode: ColorDisable,
+	}
 	assert.Equal(t, false, p.IsOutputColor())
-
-	// reset console color mode.
-	consoleColorMode = autoColor
 }
 
 func TestLoggerWithWriterSkippingPaths(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := HandlerWithWriter(buffer, testHandler200("I am good!"), "/skipped")
+	logger, _ := HandlerWithWriter(buffer, testHandler200("I am good!"), "/skipped")
 
 	PerformRequest(logger, "GET", "/logged")
 	assert.Contains(t, buffer.String(), "200")
@@ -332,7 +320,7 @@ func TestLoggerWithWriterSkippingPaths(t *testing.T) {
 
 func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := HandlerWithConfig(LoggerConfig{
+	logger, _ := HandlerWithConfig(LoggerConfig{
 		Output: buffer,
 		SkipPaths: []string{
 			"/skipped",
@@ -375,7 +363,7 @@ func TestLoggerWithConfigSkippingPaths(t *testing.T) {
 
 func TestLoggerWithConfigMaskingHeaders(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	logger := HandlerWithConfig(LoggerConfig{
+	logger, _ := HandlerWithConfig(LoggerConfig{
 		Output: buffer,
 		HideHeaderKeys: []string{
 			"^Bearer",
@@ -417,22 +405,4 @@ func TestLoggerWithConfigMaskingHeaders(t *testing.T) {
 	assert.Contains(t, buffer.String(), "п**********т")
 	assert.Contains(t, buffer.String(), "С**********і")
 	assert.Contains(t, buffer.String(), "whatever you want")
-}
-
-func TestDisableConsoleColor(t *testing.T) {
-	assert.Equal(t, autoColor, consoleColorMode)
-	DisableConsoleColor()
-	assert.Equal(t, disableColor, consoleColorMode)
-
-	// reset console color mode.
-	consoleColorMode = autoColor
-}
-
-func TestForceConsoleColor(t *testing.T) {
-	assert.Equal(t, autoColor, consoleColorMode)
-	ForceConsoleColor()
-	assert.Equal(t, forceColor, consoleColorMode)
-
-	// reset console color mode.
-	consoleColorMode = autoColor
 }

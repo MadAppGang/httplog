@@ -18,7 +18,7 @@ func TestChainLogFormatter(t *testing.T) {
 		ClientIP:   "20.20.20.20",
 		Method:     "GET",
 		Path:       "/",
-		isTerm:     true,
+		colorMode:  ColorForce,
 	}
 
 	result := ChainLogFormatter(

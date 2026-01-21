@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 )
 
 var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -16,9 +16,17 @@ var happyHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *
 
 func main() {
 	// setup routes
-	loggerWithFormatter := httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithRequestHeader)
-	http.Handle("/happy", loggerWithFormatter(happyHandler))
-	http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
+	loggerWithFormatter, err := httplog.LoggerWithFormatter(httplog.DefaultLogFormatterWithRequestHeader)
+	if err != nil {
+		panic(err)
+	}
+	http.Handle("/happy", loggerWithFormatter.Handler(happyHandler))
+
+	logger, err := httplog.Logger(http.NotFoundHandler())
+	if err != nil {
+		panic(err)
+	}
+	http.Handle("/not_found", logger)
 
 	go func() {
 		fmt.Println("Server started at port 3333")
@@ -32,7 +40,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

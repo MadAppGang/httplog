@@ -19,7 +19,7 @@ type ResponseWriter interface {
 	http.ResponseWriter
 	http.Hijacker
 	http.Flusher
-	http.CloseNotifier
+	http.Pusher
 	// Status returns the status code of the response or 0 if the response has
 	// not been written
 	Status() int
@@ -156,11 +156,6 @@ func (rw *responseWriter) Push(target string, opts *http.PushOptions) error {
 		return pusher.Push(target, opts)
 	}
 	return errors.New("the ResponseWriter doesn't support the Pusher interface")
-}
-
-// CloseNotify implements the http.CloseNotifier interface.
-func (w *responseWriter) CloseNotify() <-chan bool {
-	return w.ResponseWriter.(http.CloseNotifier).CloseNotify()
 }
 
 func (w *responseWriter) Set(status, size int) {

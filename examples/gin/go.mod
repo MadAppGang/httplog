@@ -1,18 +1,18 @@
-module github.com/MadAppGang/httplog/examples/gin
+module github.com/MadAppGang/httplog/v2/examples/gin
 
-go 1.19
+go 1.21
 
-replace github.com/MadAppGang/httplog => ../..
+replace github.com/MadAppGang/httplog/v2 => ../..
 
-replace github.com/MadAppGang/httplog/ginlog => ../../ginlog
+replace github.com/MadAppGang/httplog/v2/ginlog => ../../ginlog
 
 require (
-	github.com/MadAppGang/httplog/ginlog v0.0.0-00010101000000-000000000000
+	github.com/MadAppGang/httplog/v2/ginlog v0.0.0-00010101000000-000000000000
 	github.com/gin-gonic/gin v1.9.0
 )
 
 require (
-	github.com/MadAppGang/httplog v1.3.0 // indirect
+	github.com/MadAppGang/httplog/v2 v2.0.0 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/bytedance/sonic v1.8.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect

@@ -6,17 +6,20 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 	"github.com/julienschmidt/httprouter"
 )
 
 func LoggerMiddleware(h httprouter.Handle) httprouter.Handle {
-	logger := httplog.LoggerWithName("ME")
+	logger, err := httplog.LoggerWithName("ME")
+	if err != nil {
+		panic(err)
+	}
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h(w, r, ps)
 		})
-		logger(handler).ServeHTTP(w, r)
+		logger.Handler(handler).ServeHTTP(w, r)
 	}
 }
 

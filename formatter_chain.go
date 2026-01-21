@@ -1,14 +1,14 @@
 package httplog
 
-type FormatterFunction = func(param LogFormatterParams) string
+import "strings"
 
 // ChainLogFormatter chain a list of log formatters
-func ChainLogFormatter(formatters ...FormatterFunction) FormatterFunction {
+func ChainLogFormatter(formatters ...LogFormatter) LogFormatter {
 	return func(params LogFormatterParams) string {
-		output := ""
+		var output strings.Builder
 		for _, f := range formatters {
-			output += f(params)
+			output.WriteString(f(params))
 		}
-		return output
+		return output.String()
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MadAppGang/httplog/ginlog"
+	"github.com/MadAppGang/httplog/v2/ginlog"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,7 +18,11 @@ var happyHandler = func(c *gin.Context) {
 func main() {
 	// setup routes
 	r := gin.New()
-	r.Use(ginlog.LoggerWithName("I AM GIN ROUTER"))
+	logger, err := ginlog.LoggerWithName("I AM GIN ROUTER")
+	if err != nil {
+		panic(err)
+	}
+	r.Use(logger)
 	r.GET("/happy", happyHandler)
 	r.POST("/happy", happyHandler)
 	r.GET("/not_found", gin.WrapF(http.NotFound))
@@ -35,7 +39,7 @@ func main() {
 	time.Sleep(time.Second * 2)
 
 	// let's make couple of request
-	_, err := http.Get("http://localhost:3333/happy")
+	_, err = http.Get("http://localhost:3333/happy")
 	if err != nil {
 		fmt.Printf("Error: %+v", err)
 	}

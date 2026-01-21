@@ -1,6 +1,6 @@
-module github.com/MadAppGang/httplog
+module github.com/MadAppGang/httplog/v2
 
-go 1.19
+go 1.21
 
 require (
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2

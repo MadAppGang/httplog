@@ -1,11 +1,13 @@
-module github.com/MadAppGang/httplog/echolog
+module github.com/MadAppGang/httplog/v2/echolog
 
-go 1.20
+go 1.21
 
 require (
-	github.com/MadAppGang/httplog v1.3.0
+	github.com/MadAppGang/httplog/v2 v2.0.0
 	github.com/labstack/echo/v4 v4.10.2
 )
+
+replace github.com/MadAppGang/httplog/v2 => ../
 
 require (
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect

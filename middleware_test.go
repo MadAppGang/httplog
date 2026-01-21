@@ -11,13 +11,13 @@ import (
 func TestLoggerWithNameMiddleware(t *testing.T) {
 	buffer := new(bytes.Buffer)
 
-	middleware := LoggerWithConfig(LoggerConfig{
+	loggingMiddleware, _ := LoggerWithConfig(LoggerConfig{
 		Output:     buffer,
 		RouterName: "APIIII",
 	})
 	handler := testHandler200("Hello world!")
 
-	PerformRequest(middleware(handler), "GET", "/example?a=100")
+	PerformRequest(loggingMiddleware.Handler(handler), "GET", "/example?a=100")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "GET")
 	assert.Contains(t, buffer.String(), "/example")
@@ -27,44 +27,44 @@ func TestLoggerWithNameMiddleware(t *testing.T) {
 	// like integration tests because they test the whole logging process rather
 	// than individual functions.  Im not sure where these should go.
 	buffer.Reset()
-	PerformRequest(middleware(handler), "POST", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "POST", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "POST")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	PerformRequest(middleware(handler), "PUT", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "PUT", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "PUT")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	PerformRequest(middleware(handler), "DELETE", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "DELETE", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "DELETE")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	PerformRequest(middleware(handler), "PATCH", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "PATCH", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "PATCH")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	PerformRequest(middleware(handler), "HEAD", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "HEAD", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "HEAD")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
-	PerformRequest(middleware(handler), "OPTIONS", "/example")
+	PerformRequest(loggingMiddleware.Handler(handler), "OPTIONS", "/example")
 	assert.Contains(t, buffer.String(), "200")
 	assert.Contains(t, buffer.String(), "OPTIONS")
 	assert.Contains(t, buffer.String(), "/example")
 
 	buffer.Reset()
 
-	PerformRequest(middleware(http.NotFoundHandler()), "GET", "/notfound")
+	PerformRequest(loggingMiddleware.Handler(http.NotFoundHandler()), "GET", "/notfound")
 	assert.Contains(t, buffer.String(), "404")
 	assert.Contains(t, buffer.String(), "GET")
 	assert.Contains(t, buffer.String(), "/notfound")

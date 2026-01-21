@@ -6,11 +6,11 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/MadAppGang/httplog"
+	"github.com/MadAppGang/httplog/v2"
 )
 
 // ZapLogger log everything to zap logger with specific log level, if message is empty, URL is used instead
-func ZapLogger(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
+func ZapLogger(zl *zap.Logger, level zapcore.Level, message string) httplog.LogFormatter {
 	return func(params httplog.LogFormatterParams) string {
 		if zl == nil {
 			return ""
@@ -34,12 +34,12 @@ func ZapLogger(zl *zap.Logger, level zapcore.Level, message string) httplog.Form
 }
 
 // Combines default logger and Zap logger
-func DefaultZapLogger(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
+func DefaultZapLogger(zl *zap.Logger, level zapcore.Level, message string) httplog.LogFormatter {
 	return httplog.ChainLogFormatter(httplog.DefaultLogFormatter, ZapLogger(zl, level, message))
 }
 
 // DefaultZapLoggerWithHeaders combine default formatter, headers output and logger
-func DefaultZapLoggerWithHeaders(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
+func DefaultZapLoggerWithHeaders(zl *zap.Logger, level zapcore.Level, message string) httplog.LogFormatter {
 	return httplog.ChainLogFormatter(
 		httplog.DefaultLogFormatter,
 		httplog.RequestHeaderLogFormatter,
@@ -48,7 +48,7 @@ func DefaultZapLoggerWithHeaders(zl *zap.Logger, level zapcore.Level, message st
 }
 
 // DefaultZapLoggerWithHeaders combine default formatter, headers output, body output and logger
-func DefaultZapLoggerWithHeadersAndBody(zl *zap.Logger, level zapcore.Level, message string) httplog.FormatterFunction {
+func DefaultZapLoggerWithHeadersAndBody(zl *zap.Logger, level zapcore.Level, message string) httplog.LogFormatter {
 	return httplog.ChainLogFormatter(
 		httplog.DefaultLogFormatter,
 		httplog.RequestHeaderLogFormatter,
