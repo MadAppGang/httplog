@@ -2,9 +2,18 @@
 
 Proudly created and supported by [MadAppGang](https://madappgang.com) company.
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/MadAppGang/httplog.svg)](https://pkg.go.dev/github.com/MadAppGang/httplog)
-[![Go Report Card](https://goreportcard.com/badge/github.com/MadAppGang/httplog)](https://goreportcard.com/report/github.com/MadAppGang/httplog)
+[![Go Reference](https://pkg.go.dev/badge/github.com/MadAppGang/httplog/v2.svg)](https://pkg.go.dev/github.com/MadAppGang/httplog/v2)
+[![Go Report Card](https://goreportcard.com/badge/github.com/MadAppGang/httplog/v2)](https://goreportcard.com/report/github.com/MadAppGang/httplog/v2)
 [![codecov](https://codecov.io/gh/MadAppGang/httplog/branch/main/graph/badge.svg?token=BJT0WRNJS1)](https://codecov.io/gh/MadAppGang/httplog)
+
+## 🚀 v2.0.0 Released!
+
+This is a major release with breaking changes. See the [Migration Guide](#migrating-from-v1-to-v2) below.
+
+**Install:**
+```bash
+go get github.com/MadAppGang/httplog/v2@latest
+```
 
 ## Why?
 
@@ -28,14 +37,18 @@ But it's better to see once, here the default output you will get with couple of
 And actual code looks like this:
 
 ```go
-  func main() {
-    // setup routes
-    http.Handle("/happy", httplog.Logger(happyHandler))
-    http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
-
-    //run server
-    _ = http.ListenAndServe(":3333", nil)
+func main() {
+  logger, err := httplog.Logger(happyHandler)
+  if err != nil {
+    panic(err)
   }
+  http.Handle("/happy", logger)
+
+  notFoundLogger, _ := httplog.Logger(http.NotFoundHandler())
+  http.Handle("/not_found", notFoundLogger)
+
+  _ = http.ListenAndServe(":3333", nil)
+}
 ```
 
 
@@ -73,6 +86,61 @@ Here is a main features:
 This framework is highly inspired by [Gin logger](https://github.com/gin-gonic/gin/blob/master/logger.go) library, but has not Gin dependencies at all and has some improvements.
 Httplog has only one dependency at all: `github.com/mattn/go-isatty`. So it's will not affect your codebase size.
 
+## New in v2.0.0
+
+### Request Sampling
+Log only a percentage of requests to reduce log volume:
+```go
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    SampleRate: 0.1, // Log 10% of requests
+    DeterministicSampling: true, // Same request always sampled the same way
+})
+```
+
+### Log Level Filtering
+Filter logs by HTTP status code:
+```go
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    MinLevel: httplog.LevelWarn, // Only log 4xx and 5xx responses
+})
+```
+
+### Async Logging
+Reduce request latency with async log writing:
+```go
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    AsyncLogging: true,
+    AsyncBufferSize: 5000,
+})
+defer logger.Close() // Important! Cleanly shuts down the async goroutine
+```
+
+### Request Body Capture
+```go
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    CaptureRequestBody: true,
+})
+```
+
+### Color Mode Control
+```go
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    ColorMode: httplog.ColorForce, // ColorAuto, ColorDisable, ColorForce
+})
+```
+
+### ConfigBuilder Fluent API
+```go
+config := httplog.NewConfigBuilder().
+    WithName("API").
+    WithColorMode(httplog.ColorForce).
+    WithSampleRate(0.5).
+    WithAsyncLogging(true, 1000).
+    Build()
+
+logger, _ := httplog.LoggerWithConfig(config)
+```
+
 ## Custom format
 
 You can modify formatter as you want. Now there are two formatter available:
@@ -95,17 +163,17 @@ Here is an example of formatter in code:
 
 ```go
 // Short log formatter
-shortLoggedHandler := httplog.LoggerWithFormatter(
+shortLoggedHandler, _ := httplog.LoggerWithFormatter(
   httplog.ShortLogFormatter,
-  wrappedHandler,
 )
+http.Handle("/short", shortLoggedHandler.Handler(wrappedHandler))
 ```
 
 You can define your own log format. Log formatter is a function with a set of precalculated parameters:
 
 ```go
 // Custom log formatter
-customLoggedHandler := httplog.LoggerWithFormatter(
+customLoggedHandler, _ := httplog.LoggerWithFormatter(
   // formatter is a function, you can define your own
   func(param httplog.LogFormatterParams) string {
     statusColor := param.StatusCodeColor()
@@ -118,9 +186,8 @@ customLoggedHandler := httplog.LoggerWithFormatter(
       boldRedText, param.Path, resetColor,
     )
   },
-  happyHandler,
 )
-http.Handle("/happy_custom", customLoggedHandler)
+http.Handle("/happy_custom", customLoggedHandler.Handler(happyHandler))
 ```
 
 For more details and how to capture response body please look in the [example app](https://github.com/MadAppGang/httplog/blob/main/examples/custom_formatter/main.go).
@@ -138,7 +205,11 @@ params is a type of LogFormatterParams and the following params available for yo
 | Method | Method is the HTTP method given to the request |
 | Path | Path is a path the client requests |
 | BodySize | BodySize is the size of the Response Body |
-| Body | Body is a body content, if body is copied |
+| Context | context.Context from the request |
+| RequestBody | Request body content (if CaptureRequestBody enabled) |
+| RequestHeader | Request headers (with masking applied) |
+| ResponseBody | Response body content (if CaptureResponseBody enabled) |
+| Level | Log level (Debug, Info, Warn, Error) |
 
 ## Integrate with structure logger
 
@@ -151,13 +222,13 @@ All you need is create custom log formatter function with your logger integratio
 This repository has this formatter for zap created and you can use it importing `github.com/MadAppGang/httplog/zap`:
 
 ```go
-logger := httplog.LoggerWithConfig(
-  httplog.LoggerConfig{
-    Formatter:  lzap.DefaultZapLogger(zapLogger, zap.InfoLevel, ""),
-  },
-  http.HandlerFunc(handler),
-)
-http.Handle("/happy", logger)
+logger, err := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    Formatter: lzap.DefaultZapLogger(zapLogger, zap.InfoLevel, ""),
+})
+if err != nil {
+    panic(err)
+}
+http.Handle("/happy", logger.Handler(handler))
 ```
 
 You can find full-featured [example in zap integration folder](https://github.com/MadAppGang/httplog/blob/main/examples/zap/main.go).
@@ -169,7 +240,8 @@ After that you need init logger:
 
 ```go
 buffer := new(bytes.Buffer)
-logger := LoggerWithWriter(buffer, handler) //all output is written to buffer
+logger, _ := LoggerWithWriter(buffer) //all output is written to buffer
+http.Handle("/", logger.Handler(handler))
 ```
 
 ## Care about secrets. Skipping path and masking headers
@@ -177,14 +249,14 @@ logger := LoggerWithWriter(buffer, handler) //all output is written to buffer
 Some destinations should not be logged. For that purpose logger config has `SkipPaths` property with array of strings. Each string is a Regexp for path you want to skip. You can write exact path to skip, which would be valid regexp, or you can use regexp power:
 
 ```go
-
-logger := LoggerWithConfig(LoggerConfig{
+logger, _ := LoggerWithConfig(LoggerConfig{
   SkipPaths: []string{
     "/skipped",
     "/payments/\\w+",
     "/user/[0-9]+",
   },
-}, handler)
+})
+http.Handle("/", logger.Handler(handler))
 
 
 The other feature to safe your logs from leaking secrets is Header masking. For example you do not want to log Bearer token header, but it is  useful to see it is present and not empty.
@@ -192,14 +264,14 @@ The other feature to safe your logs from leaking secrets is Header masking. For 
 For this purpose `LoggerConfig` has field `HideHeaderKeys` which works the same as `SkipPaths`. Just feed an array of case insensitive key names regexps like that:
 
 ```go
-
-logger := LoggerWithConfig(LoggerConfig{
+logger, _ := LoggerWithConfig(LoggerConfig{
   HideHeaderKeys: []string{
     "Bearer",
     "Secret-Key",
     "Cookie",
   },
-}, handler)
+})
+http.Handle("/", logger.Handler(handler))
 
 ```
 
@@ -215,26 +287,22 @@ But some clouds have custom headers, like Cloudflare and Google Apps Engine.
 If you are using those clouds or have custom headers in you environment, you can handle that by using custom `Proxy` init parameters:
 
 ```go
-httplog.LoggerWithConfig(
-  httplog.LoggerConfig{
-    ProxyHandler: NewProxyWithType(httpdlog.ProxyGoogleAppEngine),
-  },
-http.HandlerFunc(h),
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+  ProxyHandler: NewProxyWithType(httplog.ProxyGoogleAppEngine),
+})
+http.Handle("/", logger.Handler(h))
 ```
 
 or if you have your custom headers:
 
 ```go
-logger := httplog.LoggerWithConfig(
-  httplog.LoggerConfig{
-    ProxyHandler: NewProxyWithTypeAndHeaders(
-      httpdlog.ProxyDefaultType,
-      []string{"My-HEADER-NAME", "OTHER-HEADER-NAME"}
-    ),
-  },
-  handler,
-)
-
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+  ProxyHandler: NewProxyWithTypeAndHeaders(
+    httplog.ProxyDefaultType,
+    []string{"My-HEADER-NAME", "OTHER-HEADER-NAME"}
+  ),
+})
+http.Handle("/", logger.Handler(handler))
 ```
 
 ## How to save request body and headers
@@ -243,7 +311,7 @@ You can capture response data as well. But please use it in dev environments onl
 
 ![body output](docs/full_body_formatter.png)
 
-You can use `DefaultLogFormatterWithHeaders` for headers output or `DefaultLogFormatterWithHeadersAndBody` to output response body. Don't forget to set `CaptureBody` in LoggerParams.
+You can use `DefaultLogFormatterWithHeaders` for headers output or `DefaultLogFormatterWithHeadersAndBody` to output response body. Don't forget to set `CaptureResponseBody` in LoggerParams.
 
 You can combine your custom Formatter and `HeadersLogFormatter` or/and `BodyLogFormatter` using `ChainLogFormatter`:
 
@@ -254,6 +322,60 @@ var myFormatter = httplog.ChainLogFormatter(
   httplog.BodyLogFormatter,
 )
 ```
+
+## Migrating from v1 to v2
+
+### Import Path
+```go
+// Old
+import "github.com/MadAppGang/httplog"
+
+// New
+import "github.com/MadAppGang/httplog/v2"
+```
+
+### Error Handling
+All factory functions now return errors:
+```go
+// Old
+logger := httplog.LoggerWithName("API")
+http.Handle("/", logger(handler))
+
+// New
+logger, err := httplog.LoggerWithName("API")
+if err != nil {
+    panic(err)
+}
+http.Handle("/", logger.Handler(handler))
+```
+
+### LoggingMiddleware Type
+The middleware is now wrapped in a struct with a `Close()` method:
+```go
+logger, _ := httplog.LoggerWithName("API")
+defer logger.Close() // Important for async logging!
+
+// Use logger.Handler instead of calling logger directly
+http.Handle("/", logger.Handler(handler))
+```
+
+### Removed Global Functions
+```go
+// Old - these are removed
+httplog.DisableConsoleColor()
+httplog.ForceConsoleColor()
+
+// New - use ColorMode in config
+logger, _ := httplog.LoggerWithConfig(httplog.LoggerConfig{
+    ColorMode: httplog.ColorDisable,
+})
+```
+
+### Renamed Fields
+| Old | New |
+|-----|-----|
+| `CaptureBody` | `CaptureResponseBody` |
+| `LogFormatterParams.Body` | `LogFormatterParams.ResponseBody` |
 
 ## Integration examples
 
@@ -266,7 +388,8 @@ Please go to examples folder and see how it's work:
 This package is suing canonical golang approach, and it easy to implement it with all `net/http` package.
 
 ```go
-http.Handle("/not_found", httplog.Logger(http.NotFoundHandler()))
+logger, _ := httplog.Logger(http.NotFoundHandler())
+http.Handle("/not_found", logger)
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/nethttp/main.go).
@@ -278,9 +401,8 @@ Alice is a fantastic lightweight framework to chain and manage middlewares. As A
 You don't need any wrappers and you can user logger directly:
 
 ```golang
-
-.....
-chain := alice.New(httplog.Logger, nosurf.NewPure)
+logger, _ := httplog.LoggerWithName("ALICE")
+chain := alice.New(logger.Handler, nosurf.NewPure)
 mux.Handle("/happy", chain.Then(happyHandler()))
 ```
 
@@ -293,15 +415,13 @@ Chi is a router which uses the standard approach as `Alice` package.
 You don't need any wrappers and you can user logger directly:
 
 ```go
-
 r := chi.NewRouter()
-r.Use(httplog.Logger)
+logger, _ := httplog.LoggerWithName("CHI")
+r.Use(logger.Handler)
 r.Get("/happy", happyHandler)
-...
+```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/chi/main.go).
-
-```
 
 ### Echo
 
@@ -360,7 +480,8 @@ You don't need wrappers or anything like that.
 
 ```go
 mux := goji.NewMux()
-mux.Handle(pat.Get("/happy"), httplog.Logger(happyHandler))
+logger, _ := httplog.Logger(happyHandler)
+mux.Handle(pat.Get("/happy"), logger)
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/goji/main.go).
@@ -373,11 +494,10 @@ Gorilla is using canonical middleware approach, that is why it is working with h
 You don't need to create any wrappers:
 
 ```go
-
 r := mux.NewRouter()
 r.HandleFunc("/happy", happyHandler)
-r.Use(httplog.Logger)
-
+logger, _ := httplog.LoggerWithName("GORILLA")
+r.Use(logger.Handler)
 ```
 
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/gorilla/main.go).
@@ -388,12 +508,12 @@ To use HTPPRouter you need to create simple wrapper. As HTTPRouter using custom 
 
 ```go
 func LoggerMiddleware(h httprouter.Handle) httprouter.Handle {
-	logger := httplog.LoggerWithName("ME")
+	logger, _ := httplog.LoggerWithName("HTTPROUTER")
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h(w, r, ps)
 		})
-		logger(handler).ServeHTTP(w, r)
+		logger.Handler(handler).ServeHTTP(w, r)
 	}
 }
 
@@ -408,7 +528,8 @@ Full example [could be found here](https://github.com/MadAppGang/httplog/blob/ma
 Because Go-Mojito uses dynamic handler functions, which include support for net/http types, httplog works out-of-the-box:  
 
 ```go
-mojito.WithMiddleware(httplog.Logger)
+logger, _ := httplog.LoggerWithName("MOJITO")
+mojito.WithMiddleware(logger.Handler)
 mojito.GET("/happy", happyHandler)
 ```
 Full example [could be found here](https://github.com/MadAppGang/httplog/blob/main/examples/mojito/main.go).
@@ -419,7 +540,7 @@ Negroni uses custom `negroni.Handler` as middleware. We need to create custom wr
 
 ```go
 var negroniLoggerMiddleware negroni.Handler = negroni.HandlerFunc(func(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
-  logger := httplog.Logger(next)
+  logger, _ := httplog.Logger(next)
   logger.ServeHTTP(rw, r)
 })
 
