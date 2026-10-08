@@ -11,6 +11,10 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
+	"net/textproto"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -238,4 +242,156 @@ func TestResponseWriterWithReadFrom(t *testing.T) {
 	assert.Equal(t, int(n), len(writeString))
 	assert.Equal(t, mrw.Body.String(), writeString)
 	assert.Equal(t, mrw.writtenStr, writeString)
+}
+
+func TestResponseWriterInformationalStatus(t *testing.T) {
+	for _, status := range []int{http.StatusContinue, http.StatusProcessing, http.StatusEarlyHints, 199} {
+		for _, mode := range []string{"header", "write", "readFrom", "flush"} {
+			t.Run(strconv.Itoa(status)+"/"+mode, func(t *testing.T) {
+				type result struct {
+					interimStatus  int
+					interimWritten bool
+					interimBefore  int
+					status         int
+					written        bool
+					size           int
+					before         []int
+					err            error
+				}
+				results := make(chan result, 1)
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					rw := NewResponseWriter(w)
+					var got result
+					rw.Before(func(w ResponseWriter) {
+						got.before = append(got.before, w.Status())
+						w.Header().Set("X-Before", "final")
+					})
+					rw.WriteHeader(status)
+					got.interimStatus = rw.Status()
+					got.interimWritten = rw.Written()
+					got.interimBefore = len(got.before)
+					switch mode {
+					case "header":
+						rw.WriteHeader(http.StatusCreated)
+						_, got.err = rw.Write([]byte("created"))
+					case "write":
+						_, got.err = rw.Write([]byte("created"))
+					case "readFrom":
+						_, got.err = io.Copy(rw, struct{ io.Reader }{strings.NewReader("created")})
+					case "flush":
+						rw.Flush()
+						_, got.err = rw.Write([]byte("created"))
+					}
+					rw.WriteHeader(http.StatusNotFound)
+					rw.WriteHeader(http.StatusEarlyHints)
+					got.status, got.written, got.size = rw.Status(), rw.Written(), rw.Size()
+					results <- got
+				}))
+				defer server.Close()
+
+				var informational []int
+				var informationalHeaders []http.Header
+				trace := &httptrace.ClientTrace{Got1xxResponse: func(code int, header textproto.MIMEHeader) error {
+					informational = append(informational, code)
+					informationalHeaders = append(informationalHeaders, http.Header(header).Clone())
+					return nil
+				}}
+				req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+				if !assert.NoError(t, err) {
+					return
+				}
+				req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+				res, err := server.Client().Do(req)
+				if !assert.NoError(t, err) {
+					return
+				}
+				defer res.Body.Close()
+				body, err := io.ReadAll(res.Body)
+				assert.NoError(t, err)
+				got := <-results
+				wantStatus := http.StatusOK
+				if mode == "header" {
+					wantStatus = http.StatusCreated
+				}
+				assert.NoError(t, got.err)
+				assert.Equal(t, []int{status}, informational)
+				for _, header := range informationalHeaders {
+					assert.Empty(t, header.Get("X-Before"))
+				}
+				assert.Zero(t, got.interimStatus)
+				assert.False(t, got.interimWritten)
+				assert.Zero(t, got.interimBefore)
+				assert.Equal(t, wantStatus, got.status)
+				assert.True(t, got.written)
+				assert.Equal(t, len("created"), got.size)
+				assert.Equal(t, []int{wantStatus}, got.before)
+				assert.Equal(t, wantStatus, res.StatusCode)
+				assert.Equal(t, "final", res.Header.Get("X-Before"))
+				assert.Equal(t, "created", string(body))
+			})
+		}
+	}
+}
+
+func TestResponseWriterSwitchingProtocolsIsFinal(t *testing.T) {
+	rec := httptest.NewRecorder()
+	rw := NewResponseWriter(rec)
+	var before []int
+	rw.Before(func(w ResponseWriter) { before = append(before, w.Status()) })
+	rw.WriteHeader(http.StatusSwitchingProtocols)
+	rw.WriteHeader(http.StatusOK)
+	rw.WriteHeader(http.StatusEarlyHints)
+	assert.Equal(t, http.StatusSwitchingProtocols, rw.Status())
+	assert.Equal(t, http.StatusSwitchingProtocols, rec.Code)
+	assert.True(t, rw.Written())
+	assert.Equal(t, []int{http.StatusSwitchingProtocols}, before)
+}
+
+func TestLoggerMultipleInformationalResponses(t *testing.T) {
+	logged := make(chan LogFormatterParams, 1)
+	logger, err := LoggerWithConfig(LoggerConfig{
+		Output: io.Discard,
+		Formatter: func(p LogFormatterParams) string {
+			logged <- p
+			return ""
+		},
+	})
+	if !assert.NoError(t, err) {
+		return
+	}
+	server := httptest.NewServer(logger.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Link", "</first.css>; rel=preload")
+		w.WriteHeader(http.StatusEarlyHints)
+		w.Header().Set("Link", "</second.css>; rel=preload")
+		w.WriteHeader(http.StatusEarlyHints)
+		w.Header().Del("Link")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_, _ = w.Write([]byte("unavailable"))
+	})))
+	defer server.Close()
+	var links []string
+	trace := &httptrace.ClientTrace{Got1xxResponse: func(code int, header textproto.MIMEHeader) error {
+		assert.Equal(t, http.StatusEarlyHints, code)
+		links = append(links, header.Get("Link"))
+		return nil
+	}}
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if !assert.NoError(t, err) {
+		return
+	}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	res, err := server.Client().Do(req)
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	assert.NoError(t, err)
+	param := <-logged
+	assert.Equal(t, []string{"</first.css>; rel=preload", "</second.css>; rel=preload"}, links)
+	assert.Equal(t, http.StatusServiceUnavailable, res.StatusCode)
+	assert.Equal(t, http.StatusServiceUnavailable, param.StatusCode)
+	assert.Equal(t, LevelError, param.Level)
+	assert.Equal(t, len("unavailable"), param.BodySize)
+	assert.Equal(t, "unavailable", string(body))
 }

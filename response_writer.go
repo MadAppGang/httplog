@@ -20,10 +20,9 @@ type ResponseWriter interface {
 	http.Hijacker
 	http.Flusher
 	http.Pusher
-	// Status returns the status code of the response or 0 if the response has
-	// not been written
+	// Status returns the final status code, or 0 before the final response.
 	Status() int
-	// Written returns whether or not the ResponseWriter has been written.
+	// Written reports whether the final response headers have been written.
 	Written() bool
 	// Size returns the size of the response body.
 	Size() int
@@ -72,6 +71,10 @@ type responseWriter struct {
 
 func (rw *responseWriter) WriteHeader(s int) {
 	if rw.Written() {
+		return
+	}
+	if s >= 100 && s < 200 && s != http.StatusSwitchingProtocols {
+		rw.ResponseWriter.WriteHeader(s)
 		return
 	}
 	rw.status = s
